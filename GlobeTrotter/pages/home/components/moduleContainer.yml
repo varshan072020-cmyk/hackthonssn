@@ -1,0 +1,4431 @@
+id: moduleContainer
+parentSlotId: '2'
+definitionId: customReactApp
+styles:
+  xl:
+    gridItem:
+      x: 0
+      y: 0
+      w: 24
+      h: 40
+properties:
+  name: moduleContainer
+  heightMode: auto
+  margin: false
+  fileSystem:
+    app/app.tsx: >
+      import { useState } from 'react';
+
+      import { Navigation } from '@/components/layout/navigation';
+
+      import { Header } from '@/components/layout/header';
+
+      import { DashboardView } from '@/components/dashboard/dashboard-view';
+
+      import { AllTripsView } from '@/components/trip/all-trips-view';
+
+      import { TripDetailView } from '@/components/trip/trip-detail-view';
+
+      import { ProfileView } from '@/components/profile/profile-view';
+
+      import { SettingsView } from '@/components/settings/settings-view';
+
+      import { Toaster } from '@/components/ui/toaster';
+
+      import { mockTrips, mockDestinations, mockCityStops,
+      mockScheduledActivities, mockUserProfile } from '@/lib/mock-data';
+
+      import { Trip, CityStop, ScheduledActivity, UserProfile } from
+      '@/types/trip';
+
+      import { useToast } from '@/hooks/use-toast';
+
+
+      function App() {
+        const [currentView, setCurrentView] = useState('dashboard');
+        const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+        const [trips, setTrips] = useState<Trip[]>(mockTrips);
+        const [cityStops, setCityStops] = useState<CityStop[]>(mockCityStops);
+        const [scheduledActivities, setScheduledActivities] = useState<ScheduledActivity[]>(mockScheduledActivities);
+        const [userProfile, setUserProfile] = useState<UserProfile>(mockUserProfile);
+        const { toast } = useToast();
+
+        const handleCreateTrip = (values: any) => {
+          const newTrip: Trip = {
+            id: `trip-${Date.now()}`,
+            name: values.name,
+            startDate: values.startDate,
+            endDate: values.endDate,
+            description: values.description,
+            coverPhoto: '/assets/images/default.svg',
+            userId: 'user1',
+            createdAt: new Date().toISOString(),
+            budget: 0,
+          };
+          setTrips([...trips, newTrip]);
+          toast({
+            description: 'Trip created successfully!',
+          });
+        };
+
+        const handleEditTrip = (tripId: string, values: any) => {
+          setTrips(
+            trips.map((trip) =>
+              trip.id === tripId
+                ? {
+                    ...trip,
+                    name: values.name,
+                    startDate: values.startDate,
+                    endDate: values.endDate,
+                    description: values.description,
+                  }
+                : trip
+            )
+          );
+          toast({
+            description: 'Trip updated successfully!',
+          });
+        };
+
+        const handleDeleteTrip = (tripId: string) => {
+          setTrips(trips.filter((trip) => trip.id !== tripId));
+          setCityStops(cityStops.filter((stop) => stop.tripId !== tripId));
+          toast({
+            description: 'Trip deleted successfully!',
+          });
+        };
+
+        const handleViewTrip = (tripId: string) => {
+          setSelectedTripId(tripId);
+          setCurrentView('trip-detail');
+        };
+
+        const handleBackToDashboard = () => {
+          setSelectedTripId(null);
+          setCurrentView('dashboard');
+        };
+
+        const handleAddCity = (cityId: string, startDate: string, endDate: string) => {
+          const city = mockDestinations.find((d) => d.id === cityId);
+          if (!city || !selectedTripId) return;
+
+          const newCityStop: CityStop = {
+            id: `cs-${Date.now()}`,
+            tripId: selectedTripId,
+            cityId: city.id,
+            cityName: city.name,
+            country: city.country,
+            startDate,
+            endDate,
+            image: city.image,
+            order: cityStops.filter((cs) => cs.tripId === selectedTripId).length,
+          };
+          setCityStops([...cityStops, newCityStop]);
+          toast({
+            description: `${city.name} added to itinerary!`,
+          });
+        };
+
+        const handleRemoveCity = (cityStopId: string) => {
+          setCityStops(cityStops.filter((stop) => stop.id !== cityStopId));
+          setScheduledActivities(scheduledActivities.filter((activity) => activity.cityStopId !== cityStopId));
+          toast({
+            description: 'City removed from itinerary!',
+          });
+        };
+
+        const handleReorderCities = (reorderedStops: CityStop[]) => {
+          setCityStops(cityStops.map((stop) => reorderedStops.find((rs) => rs.id === stop.id) || stop));
+        };
+
+        const handleAddActivity = (cityStopId: string, activityId: string, date: string, time: string) => {
+          const { mockActivities } = require('@/lib/mock-data');
+          const activity = mockActivities.find((a: any) => a.id === activityId);
+          if (!activity) return;
+
+          const newScheduledActivity: ScheduledActivity = {
+            id: `sa-${Date.now()}`,
+            activityId,
+            cityStopId,
+            date,
+            time,
+            cost: activity.cost,
+            order: scheduledActivities.filter((a) => a.cityStopId === cityStopId && a.date === date).length,
+          };
+          setScheduledActivities([...scheduledActivities, newScheduledActivity]);
+          toast({
+            description: 'Activity added to schedule!',
+          });
+        };
+
+        const handleRemoveActivity = (activityId: string) => {
+          setScheduledActivities(scheduledActivities.filter((activity) => activity.id !== activityId));
+          toast({
+            description: 'Activity removed from schedule!',
+          });
+        };
+
+        const handleUpdateBudget = (budget: number) => {
+          if (!selectedTripId) return;
+          setTrips(trips.map((trip) => (trip.id === selectedTripId ? { ...trip, budget } : trip)));
+          toast({
+            description: 'Budget updated successfully!',
+          });
+        };
+
+        const handleUpdateProfile = (updates: Partial<UserProfile>) => {
+          setUserProfile({ ...userProfile, ...updates });
+        };
+
+        const handleUpdateLanguage = (language: string) => {
+          setUserProfile({ ...userProfile, language });
+        };
+
+        const handleDeleteAccount = () => {
+          toast({
+            description: 'Account deletion requested. This feature is simulated.',
+          });
+        };
+
+        const selectedTrip = trips.find((t) => t.id === selectedTripId);
+        const tripCityStops = cityStops.filter((cs) => cs.tripId === selectedTripId);
+        const tripActivities = scheduledActivities.filter((sa) => tripCityStops.some((cs) => cs.id === sa.cityStopId));
+
+        return (
+          <div className="flex h-screen overflow-hidden">
+            <div className="w-64 flex-shrink-0">
+              <Navigation currentView={currentView} onViewChange={setCurrentView} />
+            </div>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <Header onCreateTrip={handleCreateTrip} />
+              <main className="flex-1 overflow-y-auto bg-muted/30">
+                {currentView === 'dashboard' && (
+                  <DashboardView
+                    trips={trips}
+                    destinations={mockDestinations}
+                    onCreateTrip={handleCreateTrip}
+                    onEditTrip={handleEditTrip}
+                    onDeleteTrip={handleDeleteTrip}
+                    onViewTrip={handleViewTrip}
+                  />
+                )}
+                {currentView === 'trips' && (
+                  <AllTripsView
+                    trips={trips}
+                    onCreateTrip={handleCreateTrip}
+                    onEditTrip={handleEditTrip}
+                    onDeleteTrip={handleDeleteTrip}
+                    onViewTrip={handleViewTrip}
+                  />
+                )}
+                {currentView === 'trip-detail' && selectedTrip && (
+                  <TripDetailView
+                    trip={selectedTrip}
+                    cityStops={tripCityStops}
+                    scheduledActivities={tripActivities}
+                    onBack={handleBackToDashboard}
+                    onAddCity={handleAddCity}
+                    onRemoveCity={handleRemoveCity}
+                    onReorderCities={handleReorderCities}
+                    onAddActivity={handleAddActivity}
+                    onRemoveActivity={handleRemoveActivity}
+                    onUpdateBudget={handleUpdateBudget}
+                  />
+                )}
+                {currentView === 'profile' && <ProfileView profile={userProfile} onUpdateProfile={handleUpdateProfile} />}
+                {currentView === 'settings' && (
+                  <SettingsView language={userProfile.language} onUpdateLanguage={handleUpdateLanguage} onDeleteAccount={handleDeleteAccount} />
+                )}
+              </main>
+            </div>
+            <Toaster />
+          </div>
+        );
+      }
+
+
+      export default App;
+    components/ui/button.tsx: |+
+      import * as React from "react"
+      import { Slot } from "@radix-ui/react-slot"
+      import { cva, type VariantProps } from "class-variance-authority"
+
+      import { cn } from "@/lib/utils"
+
+      const buttonVariants = cva(
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        {
+          variants: {
+            variant: {
+              default:
+                "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+              destructive:
+                "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+              outline:
+                "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+              secondary:
+                "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+              ghost: "hover:bg-accent hover:text-accent-foreground",
+              link: "text-primary underline-offset-4 hover:underline",
+            },
+            size: {
+              default: "h-9 px-4 py-2",
+              sm: "h-8 rounded-md px-3 text-xs",
+              lg: "h-10 rounded-md px-8",
+              icon: "h-9 w-9",
+            },
+          },
+          defaultVariants: {
+            variant: "default",
+            size: "default",
+          },
+        }
+      )
+
+      export interface ButtonProps
+        extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+          VariantProps<typeof buttonVariants> {
+        asChild?: boolean
+      }
+
+      const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+        ({ className, variant, size, asChild = false, ...props }, ref) => {
+          const Comp = asChild ? Slot : "button"
+          return (
+            <Comp
+              className={cn(buttonVariants({ variant, size, className }))}
+              ref={ref}
+              {...props}
+            />
+          )
+        }
+      )
+      Button.displayName = "Button"
+
+      export { Button, buttonVariants }
+
+
+
+    components/ui/card.tsx: >+
+      import * as React from "react"
+
+
+      import { cn } from "@/lib/utils"
+
+
+      const Card = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement>
+      >(({ className, ...props }, ref) => (
+        <div
+          ref={ref}
+          className={cn(
+            "rounded-lg border bg-card text-card-foreground shadow-sm",
+            className,
+          )}
+          {...props}
+        />
+      ))
+
+      Card.displayName = "Card"
+
+
+      const CardHeader = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement>
+      >(({ className, ...props }, ref) => (
+        <div
+          ref={ref}
+          className={cn("flex flex-col space-y-1.5 p-6", className)}
+          {...props}
+        />
+      ))
+
+      CardHeader.displayName = "CardHeader"
+
+
+      const CardTitle = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLHeadingElement>
+      >(({ className, ...props }, ref) => (
+        <h3
+          ref={ref}
+          className={cn(
+            "text-2xl font-semibold leading-none tracking-tight",
+            className,
+          )}
+          {...props}
+        />
+      ))
+
+      CardTitle.displayName = "CardTitle"
+
+
+      const CardDescription = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLParagraphElement>
+      >(({ className, ...props }, ref) => (
+        <p
+          ref={ref}
+          className={cn("text-sm text-muted-foreground", className)}
+          {...props}
+        />
+      ))
+
+      CardDescription.displayName = "CardDescription"
+
+
+      const CardContent = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement>
+      >(({ className, ...props }, ref) => (
+        <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+      ))
+
+      CardContent.displayName = "CardContent"
+
+
+      const CardFooter = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement>
+      >(({ className, ...props }, ref) => (
+        <div
+          ref={ref}
+          className={cn("flex items-center p-6 pt-0", className)}
+          {...props}
+        />
+      ))
+
+      CardFooter.displayName = "CardFooter"
+
+
+      export { Card, CardHeader, CardFooter, CardTitle, CardDescription,
+      CardContent }
+
+    lib/utils.ts: |
+      import { clsx, type ClassValue } from 'clsx';
+      import { twMerge } from 'tailwind-merge';
+
+      export function cn(...inputs: ClassValue[]) {
+        return twMerge(clsx(inputs));
+      }
+    package.json: "{\n\t\"name\": \"uib-module\",\n\t\"packageManager\": \"bun\",\n\t\"private\": true,\n\t\"version\": \"0.0.0\",\n\t\"type\": \"module\",\n\t\"scripts\": {\n\t\t\"lint\": \"eslint .\"\n\t},\n\t\"dependencies\": {\n\t\t\"@hookform/resolvers\": \"^5.2.2\",\n\t\t\"@radix-ui/react-avatar\": \"^1.1.11\",\n\t\t\"@radix-ui/react-dialog\": \"^1.1.15\",\n\t\t\"@radix-ui/react-icons\": \"1.3.2\",\n\t\t\"@radix-ui/react-label\": \"^2.1.8\",\n\t\t\"@radix-ui/react-popover\": \"^1.1.15\",\n\t\t\"@radix-ui/react-progress\": \"^1.1.8\",\n\t\t\"@radix-ui/react-scroll-area\": \"^1.2.10\",\n\t\t\"@radix-ui/react-select\": \"^2.2.6\",\n\t\t\"@radix-ui/react-separator\": \"^1.1.8\",\n\t\t\"@radix-ui/react-slot\": \"^1.2.4\",\n\t\t\"@radix-ui/react-tabs\": \"^1.1.13\",\n\t\t\"@radix-ui/react-toast\": \"^1.2.15\",\n\t\t\"@dnd-kit/core\": \"^6.1.0\",\n\t\t\"@dnd-kit/sortable\": \"^8.0.0\",\n\t\t\"@dnd-kit/utilities\": \"^3.2.2\",\n\t\t\"@uibakery/data\": \"0.0.11\",\n\t\t\"canvas-confetti\": \"1.9.3\",\n\t\t\"class-variance-authority\": \"0.7.0\",\n\t\t\"clsx\": \"2.1.1\",\n\t\t\"date-fns\": \"^4.1.0\",\n\t\t\"lucide-react\": \"0.446.0\",\n\t\t\"recharts\": \"^2.12.0\",\n\t\t\"react\": \"19.2.1\",\n\t\t\"react-day-picker\": \"^9.13.0\",\n\t\t\"react-dom\": \"19.2.1\",\n\t\t\"react-hook-form\": \"^7.69.0\",\n\t\t\"react-icons\": \"~5.5.0\",\n\t\t\"tailwind-merge\": \"2.5.2\",\n\t\t\"zod\": \"^4.3.4\"\n\t},\n\t\"devDependencies\": {\n\t\t\"@eslint/js\": \"9.11.1\",\n\t\t\"@types/node\": \"22.7.3\",\n\t\t\"@types/react\": \"19.2.1\",\n\t\t\"@types/react-dom\": \"19.2.1\",\n\t\t\"autoprefixer\": \"10.4.20\",\n\t\t\"eslint\": \"9.11.1\",\n\t\t\"eslint-plugin-react-hooks\": \"5.1.0-rc.0\",\n\t\t\"eslint-plugin-react-refresh\": \"0.4.12\",\n\t\t\"globals\": \"15.9.0\",\n\t\t\"postcss\": \"8.4.47\",\n\t\t\"tailwindcss\": \"3.4.13\",\n\t\t\"typescript\": \"5.5.3\",\n\t\t\"typescript-eslint\": \"8.7.0\"\n\t}\n}\n"
+    initial.md: >
+      # Requirements
+
+      ## Summary
+
+      GlobeTrotter is a personalized travel planning web application that helps
+      users create, manage, and share detailed trip itineraries. Users can
+      search cities and activities, build multi-city itineraries with day-by-day
+      schedules, track budgets with visual breakdowns, and generate shareable
+      public links for their trips. The platform provides an intuitive dashboard
+      for managing upcoming trips, recommended destinations, and quick trip
+      creation, delivering value through streamlined travel organization and
+      collaborative trip sharing.
+
+
+      ## Use cases
+
+      - **Dashboard & Trip Management**
+        1) User views dashboard with upcoming trips and recommended destinations
+        2) User creates a new trip with name, dates, description, and cover photo
+        3) User views all trips in a grid/list layout
+        4) User edits or deletes existing trips
+        5) User accesses quick actions for trip planning
+
+      - **Itinerary Builder & City Management**
+        1) User opens a trip to build itinerary
+        2) User searches cities by name, country, cost index, or popularity
+        3) User adds cities as stops to the trip with assigned dates
+        4) User reorders cities via drag-and-drop
+        5) User views itinerary in timeline or city-wise layout
+
+      - **Activity Planning & Scheduling**
+        1) User selects a city stop in the itinerary
+        2) User browses activities by type, cost, and duration with images
+        3) User adds activities to specific days
+        4) User assigns times and reorders activities via drag-and-drop
+        5) User toggles between calendar and list view for activities
+
+      - **Budget Tracking & Cost Analysis**
+        1) User views budget breakdown by category (transport, stay, activities, meals)
+        2) System displays pie and bar charts for cost visualization
+        3) User adds expenses to each activity or city stop
+        4) System shows alerts for overbudget days
+        5) User monitors total trip cost in real-time
+
+      - **Trip Sharing & Collaboration**
+        1) User generates a public URL for their trip itinerary
+        2) System creates a read-only shareable view
+        3) Guest views the itinerary without login
+        4) Guest copies the trip to their own account (after signup)
+        5) User shares trip via social media links
+
+      - **User Profile & Settings**
+        1) User edits profile information (name, photo, email)
+        2) User sets language preferences
+        3) User views and manages saved destinations
+        4) User updates account settings
+        5) User deletes account if needed
+
+      ## Plan
+
+      ### Dashboard & Trip Management
+
+      1. [x] Create app shell with responsive navigation sidebar and header
+
+      2. [x] Build dashboard page with upcoming trips section displaying trip
+      cards (name, dates, cover photo)
+
+      3. [x] Add recommended destinations section with destination cards
+
+      4. [x] Implement trip creation modal with form fields for name, start
+      date, end date, description, and cover photo upload
+
+      5. [x] Create trips list/grid view with edit and delete actions
+
+      6. [x] Add quick action buttons for "Create Trip" and "Browse
+      Destinations"
+
+      7. [x] Generate mock data for 5-8 sample trips and 6-10 recommended
+      destinations
+
+
+      ### Itinerary Builder & City Management
+
+      1. [x] Create trip detail page with itinerary builder interface
+
+      2. [x] Build city search component with filters for name, country, cost
+      index, and popularity
+
+      3. [x] Implement city stops list with drag-and-drop reordering
+      functionality
+
+      4. [x] Add "Add City" button that opens city search modal
+
+      5. [x] Create city stop cards showing city name, country, dates, and
+      thumbnail
+
+      6. [x] Build timeline view showing cities in chronological order
+
+      7. [x] Generate mock data for 50+ cities with search metadata
+
+
+      ### Activity Planning & Scheduling
+
+      1. [x] Create day-by-day activity section within each city stop
+
+      2. [x] Build activity search/browse component with filters for type, cost,
+      and duration
+
+      3. [x] Implement activity cards with images, descriptions, cost, and
+      duration
+
+      4. [x] Add drag-and-drop functionality to reorder activities within a day
+
+      5. [x] Create calendar view toggle for viewing activities by date
+
+      6. [x] Build list view toggle for compact activity display
+
+      7. [x] Add time picker for scheduling activities throughout the day
+
+      8. [x] Generate mock data for 100+ activities across different categories
+
+
+      ### Budget Tracking & Cost Analysis
+
+      1. [x] Create budget overview panel showing total cost and breakdown
+
+      2. [x] Implement pie chart for cost distribution by category (transport,
+      stay, activities, meals)
+
+      3. [x] Build bar chart showing daily spending across trip duration
+
+      4. [x] Add expense input fields to activities and city stops
+
+      5. [x] Implement overbudget alerts with visual indicators for days
+      exceeding daily budget
+
+      6. [x] Create budget summary widget visible on trip detail page
+
+      7. [x] Add ability to set overall trip budget with progress indicator
+
+
+      ### Trip Sharing & Collaboration
+
+      1. [x] Implement "Share Trip" button that generates unique public URL
+
+      2. [x] Create read-only public itinerary view page accessible without
+      login
+
+      3. [x] Build social media sharing buttons (Facebook, Twitter, WhatsApp,
+      copy link)
+
+      4. [x] Add "Copy Trip" button for guests to duplicate trip to their
+      account (requires signup)
+
+      5. [x] Display trip owner information on public view
+
+      6. [x] Implement basic analytics for public link views (optional)
+
+
+      ### User Profile & Settings
+
+      1. [x] Create user profile page with editable fields for name, photo, and
+      email
+
+      2. [x] Build language preference selector with 3-5 language options
+
+      3. [x] Implement saved destinations section showing bookmarked cities
+
+      4. [x] Add account settings panel for password change and notification
+      preferences
+
+      5. [x] Create delete account confirmation flow with warning dialog
+
+      6. [x] Add profile photo upload with preview functionality
+    components/ui/dialog.tsx: |+
+      import * as React from "react"
+      import * as DialogPrimitive from "@radix-ui/react-dialog"
+      import { X } from "lucide-react"
+
+      import { cn } from "@/lib/utils"
+
+      const Dialog = DialogPrimitive.Root
+
+      const DialogTrigger = DialogPrimitive.Trigger
+
+      const DialogPortal = DialogPrimitive.Portal
+
+      const DialogClose = DialogPrimitive.Close
+
+      const DialogOverlay = React.forwardRef<
+        React.ElementRef<typeof DialogPrimitive.Overlay>,
+        React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+      >(({ className, ...props }, ref) => (
+        <DialogPrimitive.Overlay
+          ref={ref}
+          className={cn(
+            "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            className
+          )}
+          {...props}
+        />
+      ))
+      DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+
+      const DialogContent = React.forwardRef<
+        React.ElementRef<typeof DialogPrimitive.Content>,
+        React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+      >(({ className, children, ...props }, ref) => (
+        <DialogPortal>
+          <DialogOverlay />
+          <DialogPrimitive.Content
+            ref={ref}
+            className={cn(
+              "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+              className
+            )}
+            {...props}
+          >
+            {children}
+            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      ))
+      DialogContent.displayName = DialogPrimitive.Content.displayName
+
+      const DialogHeader = ({
+        className,
+        ...props
+      }: React.HTMLAttributes<HTMLDivElement>) => (
+        <div
+          className={cn(
+            "flex flex-col space-y-1.5 text-center sm:text-left",
+            className
+          )}
+          {...props}
+        />
+      )
+      DialogHeader.displayName = "DialogHeader"
+
+      const DialogFooter = ({
+        className,
+        ...props
+      }: React.HTMLAttributes<HTMLDivElement>) => (
+        <div
+          className={cn(
+            "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+            className
+          )}
+          {...props}
+        />
+      )
+      DialogFooter.displayName = "DialogFooter"
+
+      const DialogTitle = React.forwardRef<
+        React.ElementRef<typeof DialogPrimitive.Title>,
+        React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+      >(({ className, ...props }, ref) => (
+        <DialogPrimitive.Title
+          ref={ref}
+          className={cn(
+            "text-lg font-semibold leading-none tracking-tight",
+            className
+          )}
+          {...props}
+        />
+      ))
+      DialogTitle.displayName = DialogPrimitive.Title.displayName
+
+      const DialogDescription = React.forwardRef<
+        React.ElementRef<typeof DialogPrimitive.Description>,
+        React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+      >(({ className, ...props }, ref) => (
+        <DialogPrimitive.Description
+          ref={ref}
+          className={cn("text-sm text-muted-foreground", className)}
+          {...props}
+        />
+      ))
+      DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+      export {
+        Dialog,
+        DialogPortal,
+        DialogOverlay,
+        DialogTrigger,
+        DialogClose,
+        DialogContent,
+        DialogHeader,
+        DialogFooter,
+        DialogTitle,
+        DialogDescription,
+      }
+
+    components/ui/input.tsx: >+
+      import * as React from "react"
+
+
+      import { cn } from "@/lib/utils"
+
+
+      const Input = React.forwardRef<HTMLInputElement,
+      React.ComponentProps<"input">>(
+        ({ className, type, ...props }, ref) => {
+          return (
+            <input
+              type={type}
+              className={cn(
+                "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+                className
+              )}
+              ref={ref}
+              {...props}
+            />
+          )
+        }
+      )
+
+      Input.displayName = "Input"
+
+
+      export { Input }
+
+    components/ui/label.tsx: |+
+      import * as React from "react"
+      import * as LabelPrimitive from "@radix-ui/react-label"
+      import { cva, type VariantProps } from "class-variance-authority"
+
+      import { cn } from "@/lib/utils"
+
+      const labelVariants = cva(
+        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      )
+
+      const Label = React.forwardRef<
+        React.ElementRef<typeof LabelPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
+          VariantProps<typeof labelVariants>
+      >(({ className, ...props }, ref) => (
+        <LabelPrimitive.Root
+          ref={ref}
+          className={cn(labelVariants(), className)}
+          {...props}
+        />
+      ))
+      Label.displayName = LabelPrimitive.Root.displayName
+
+      export { Label }
+
+    components/ui/textarea.tsx: |+
+      import * as React from "react"
+
+      import { cn } from "@/lib/utils"
+
+      const Textarea = React.forwardRef<
+        HTMLTextAreaElement,
+        React.ComponentProps<"textarea">
+      >(({ className, ...props }, ref) => {
+        return (
+          <textarea
+            className={cn(
+              "flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+              className
+            )}
+            ref={ref}
+            {...props}
+          />
+        )
+      })
+      Textarea.displayName = "Textarea"
+
+      export { Textarea }
+
+    components/ui/badge.tsx: |+
+      import * as React from "react"
+      import { cva, type VariantProps } from "class-variance-authority"
+
+      import { cn } from "@/lib/utils"
+
+      const badgeVariants = cva(
+        "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+        {
+          variants: {
+            variant: {
+              default:
+                "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+              secondary:
+                "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+              destructive:
+                "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+              outline: "text-foreground",
+            },
+          },
+          defaultVariants: {
+            variant: "default",
+          },
+        }
+      )
+
+      export interface BadgeProps
+        extends React.HTMLAttributes<HTMLDivElement>,
+          VariantProps<typeof badgeVariants> {}
+
+      function Badge({ className, variant, ...props }: BadgeProps) {
+        return (
+          <div className={cn(badgeVariants({ variant }), className)} {...props} />
+        )
+      }
+
+      export { Badge, badgeVariants }
+
+    components/ui/avatar.tsx: |+
+      import * as React from "react"
+      import * as AvatarPrimitive from "@radix-ui/react-avatar"
+
+      import { cn } from "@/lib/utils"
+
+      const Avatar = React.forwardRef<
+        React.ElementRef<typeof AvatarPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
+      >(({ className, ...props }, ref) => (
+        <AvatarPrimitive.Root
+          ref={ref}
+          className={cn(
+            "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+            className
+          )}
+          {...props}
+        />
+      ))
+      Avatar.displayName = AvatarPrimitive.Root.displayName
+
+      const AvatarImage = React.forwardRef<
+        React.ElementRef<typeof AvatarPrimitive.Image>,
+        React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+      >(({ className, ...props }, ref) => (
+        <AvatarPrimitive.Image
+          ref={ref}
+          className={cn("aspect-square h-full w-full", className)}
+          {...props}
+        />
+      ))
+      AvatarImage.displayName = AvatarPrimitive.Image.displayName
+
+      const AvatarFallback = React.forwardRef<
+        React.ElementRef<typeof AvatarPrimitive.Fallback>,
+        React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
+      >(({ className, ...props }, ref) => (
+        <AvatarPrimitive.Fallback
+          ref={ref}
+          className={cn(
+            "flex h-full w-full items-center justify-center rounded-full bg-muted",
+            className
+          )}
+          {...props}
+        />
+      ))
+      AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
+
+      export { Avatar, AvatarImage, AvatarFallback }
+
+    components/ui/select.tsx: >+
+      "use client"
+
+
+      import * as React from "react"
+
+      import * as SelectPrimitive from "@radix-ui/react-select"
+
+      import { Check, ChevronDown, ChevronUp } from "lucide-react"
+
+
+      import { cn } from "@/lib/utils"
+
+
+      const Select = SelectPrimitive.Root
+
+
+      const SelectGroup = SelectPrimitive.Group
+
+
+      const SelectValue = SelectPrimitive.Value
+
+
+      const SelectTrigger = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.Trigger>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+      >(({ className, children, ...props }, ref) => (
+        <SelectPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+            className
+          )}
+          {...props}
+        >
+          {children}
+          <SelectPrimitive.Icon asChild>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </SelectPrimitive.Icon>
+        </SelectPrimitive.Trigger>
+      ))
+
+      SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+
+      const SelectScrollUpButton = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
+      >(({ className, ...props }, ref) => (
+        <SelectPrimitive.ScrollUpButton
+          ref={ref}
+          className={cn(
+            "flex cursor-default items-center justify-center py-1",
+            className
+          )}
+          {...props}
+        >
+          <ChevronUp className="h-4 w-4" />
+        </SelectPrimitive.ScrollUpButton>
+      ))
+
+      SelectScrollUpButton.displayName =
+      SelectPrimitive.ScrollUpButton.displayName
+
+
+      const SelectScrollDownButton = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
+      >(({ className, ...props }, ref) => (
+        <SelectPrimitive.ScrollDownButton
+          ref={ref}
+          className={cn(
+            "flex cursor-default items-center justify-center py-1",
+            className
+          )}
+          {...props}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </SelectPrimitive.ScrollDownButton>
+      ))
+
+      SelectScrollDownButton.displayName =
+        SelectPrimitive.ScrollDownButton.displayName
+
+      const SelectContent = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.Content>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+      >(({ className, children, position = "popper", ...props }, ref) => (
+        <SelectPrimitive.Portal>
+          <SelectPrimitive.Content
+            ref={ref}
+            className={cn(
+              "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
+              position === "popper" &&
+                "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+              className
+            )}
+            position={position}
+            {...props}
+          >
+            <SelectScrollUpButton />
+            <SelectPrimitive.Viewport
+              className={cn(
+                "p-1",
+                position === "popper" &&
+                  "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+              )}
+            >
+              {children}
+            </SelectPrimitive.Viewport>
+            <SelectScrollDownButton />
+          </SelectPrimitive.Content>
+        </SelectPrimitive.Portal>
+      ))
+
+      SelectContent.displayName = SelectPrimitive.Content.displayName
+
+
+      const SelectLabel = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.Label>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+      >(({ className, ...props }, ref) => (
+        <SelectPrimitive.Label
+          ref={ref}
+          className={cn("px-2 py-1.5 text-sm font-semibold", className)}
+          {...props}
+        />
+      ))
+
+      SelectLabel.displayName = SelectPrimitive.Label.displayName
+
+
+      const SelectItem = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.Item>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+      >(({ className, children, ...props }, ref) => (
+        <SelectPrimitive.Item
+          ref={ref}
+          className={cn(
+            "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+            className
+          )}
+          {...props}
+        >
+          <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+            <SelectPrimitive.ItemIndicator>
+              <Check className="h-4 w-4" />
+            </SelectPrimitive.ItemIndicator>
+          </span>
+          <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+        </SelectPrimitive.Item>
+      ))
+
+      SelectItem.displayName = SelectPrimitive.Item.displayName
+
+
+      const SelectSeparator = React.forwardRef<
+        React.ElementRef<typeof SelectPrimitive.Separator>,
+        React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+      >(({ className, ...props }, ref) => (
+        <SelectPrimitive.Separator
+          ref={ref}
+          className={cn("-mx-1 my-1 h-px bg-muted", className)}
+          {...props}
+        />
+      ))
+
+      SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+
+
+      export {
+        Select,
+        SelectGroup,
+        SelectValue,
+        SelectTrigger,
+        SelectContent,
+        SelectLabel,
+        SelectItem,
+        SelectSeparator,
+        SelectScrollUpButton,
+        SelectScrollDownButton,
+      }
+
+    components/ui/separator.tsx: |+
+      import * as React from "react"
+      import * as SeparatorPrimitive from "@radix-ui/react-separator"
+
+      import { cn } from "@/lib/utils"
+
+      const Separator = React.forwardRef<
+        React.ElementRef<typeof SeparatorPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>
+      >(
+        (
+          { className, orientation = "horizontal", decorative = true, ...props },
+          ref
+        ) => (
+          <SeparatorPrimitive.Root
+            ref={ref}
+            decorative={decorative}
+            orientation={orientation}
+            className={cn(
+              "shrink-0 bg-border",
+              orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]",
+              className
+            )}
+            {...props}
+          />
+        )
+      )
+      Separator.displayName = SeparatorPrimitive.Root.displayName
+
+      export { Separator }
+
+    components/ui/form.tsx: >+
+      import * as React from "react"
+
+      import * as LabelPrimitive from "@radix-ui/react-label"
+
+      import { Slot } from "@radix-ui/react-slot"
+
+      import {
+        Controller,
+        FormProvider,
+        useFormContext,
+        type ControllerProps,
+        type FieldPath,
+        type FieldValues,
+      } from "react-hook-form"
+
+
+      import { cn } from "@/lib/utils"
+
+      import { Label } from "@/components/ui/label"
+
+
+      const Form = FormProvider
+
+
+      type FormFieldContextValue<
+        TFieldValues extends FieldValues = FieldValues,
+        TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+      > = {
+        name: TName
+      }
+
+
+      const FormFieldContext = React.createContext<FormFieldContextValue |
+      null>(null)
+
+
+      const FormField = <
+        TFieldValues extends FieldValues = FieldValues,
+        TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+      >({
+        ...props
+      }: ControllerProps<TFieldValues, TName>) => {
+        return (
+          <FormFieldContext.Provider value={{ name: props.name }}>
+            <Controller {...props} />
+          </FormFieldContext.Provider>
+        )
+      }
+
+
+      const useFormField = () => {
+        const fieldContext = React.useContext(FormFieldContext)
+        const itemContext = React.useContext(FormItemContext)
+        const { getFieldState, formState } = useFormContext()
+
+        if (!fieldContext) {
+          throw new Error("useFormField should be used within <FormField>")
+        }
+
+        if (!itemContext) {
+          throw new Error("useFormField should be used within <FormItem>")
+        }
+
+        const fieldState = getFieldState(fieldContext.name, formState)
+
+        const { id } = itemContext
+
+        return {
+          id,
+          name: fieldContext.name,
+          formItemId: `${id}-form-item`,
+          formDescriptionId: `${id}-form-item-description`,
+          formMessageId: `${id}-form-item-message`,
+          ...fieldState,
+        }
+      }
+
+
+      type FormItemContextValue = {
+        id: string
+      }
+
+
+      const FormItemContext = React.createContext<FormItemContextValue |
+      null>(null)
+
+
+      const FormItem = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement>
+      >(({ className, ...props }, ref) => {
+        const id = React.useId()
+
+        return (
+          <FormItemContext.Provider value={{ id }}>
+            <div ref={ref} className={cn("space-y-2", className)} {...props} />
+          </FormItemContext.Provider>
+        )
+      })
+
+      FormItem.displayName = "FormItem"
+
+
+      const FormLabel = React.forwardRef<
+        React.ElementRef<typeof LabelPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
+      >(({ className, ...props }, ref) => {
+        const { error, formItemId } = useFormField()
+
+        return (
+          <Label
+            ref={ref}
+            className={cn(error && "text-destructive", className)}
+            htmlFor={formItemId}
+            {...props}
+          />
+        )
+      })
+
+      FormLabel.displayName = "FormLabel"
+
+
+      const FormControl = React.forwardRef<
+        React.ElementRef<typeof Slot>,
+        React.ComponentPropsWithoutRef<typeof Slot>
+      >(({ ...props }, ref) => {
+        const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+
+        return (
+          <Slot
+            ref={ref}
+            id={formItemId}
+            aria-describedby={
+              !error
+                ? `${formDescriptionId}`
+                : `${formDescriptionId} ${formMessageId}`
+            }
+            aria-invalid={!!error}
+            {...props}
+          />
+        )
+      })
+
+      FormControl.displayName = "FormControl"
+
+
+      const FormDescription = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLParagraphElement>
+      >(({ className, ...props }, ref) => {
+        const { formDescriptionId } = useFormField()
+
+        return (
+          <p
+            ref={ref}
+            id={formDescriptionId}
+            className={cn("text-[0.8rem] text-muted-foreground", className)}
+            {...props}
+          />
+        )
+      })
+
+      FormDescription.displayName = "FormDescription"
+
+
+      const FormMessage = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLParagraphElement>
+      >(({ className, children, ...props }, ref) => {
+        const { error, formMessageId } = useFormField()
+        const body = error ? String(error?.message ?? "") : children
+
+        if (!body) {
+          return null
+        }
+
+        return (
+          <p
+            ref={ref}
+            id={formMessageId}
+            className={cn("text-[0.8rem] font-medium text-destructive", className)}
+            {...props}
+          >
+            {body}
+          </p>
+        )
+      })
+
+      FormMessage.displayName = "FormMessage"
+
+
+      export {
+        useFormField,
+        Form,
+        FormItem,
+        FormLabel,
+        FormControl,
+        FormDescription,
+        FormMessage,
+        FormField,
+      }
+
+    types/trip.ts: |
+      export interface Trip {
+        id: string;
+        name: string;
+        startDate: string;
+        endDate: string;
+        description: string;
+        coverPhoto: string;
+        userId: string;
+        createdAt: string;
+        budget?: number;
+      }
+
+      export interface Destination {
+        id: string;
+        name: string;
+        country: string;
+        description: string;
+        image: string;
+        costIndex: number;
+        popularity: number;
+      }
+
+      export interface CityStop {
+        id: string;
+        tripId: string;
+        cityId: string;
+        cityName: string;
+        country: string;
+        startDate: string;
+        endDate: string;
+        image: string;
+        order: number;
+        notes?: string;
+      }
+
+      export interface Activity {
+        id: string;
+        name: string;
+        description: string;
+        type: string;
+        cost: number;
+        duration: number;
+        image: string;
+        cityId: string;
+      }
+
+      export interface ScheduledActivity {
+        id: string;
+        activityId: string;
+        cityStopId: string;
+        date: string;
+        time: string;
+        cost: number;
+        notes?: string;
+        order: number;
+      }
+
+      export interface BudgetCategory {
+        category: 'transport' | 'stay' | 'activities' | 'meals';
+        amount: number;
+        spent: number;
+      }
+
+      export interface UserProfile {
+        id: string;
+        name: string;
+        email: string;
+        photo: string;
+        language: string;
+        savedDestinations: string[];
+      }
+    lib/mock-data.ts: >
+      import { Trip, Destination, Activity, CityStop, ScheduledActivity,
+      UserProfile } from '@/types/trip';
+
+
+      export const mockTrips: Trip[] = [
+        {
+          id: '1',
+          name: 'European Adventure',
+          startDate: '2026-03-15',
+          endDate: '2026-03-28',
+          description: 'Exploring the historic cities of Europe',
+          coverPhoto: '/assets/images/default.svg',
+          userId: 'user1',
+          createdAt: '2026-01-01T10:00:00Z',
+          budget: 5000,
+        },
+        {
+          id: '2',
+          name: 'Tokyo & Kyoto Discovery',
+          startDate: '2026-05-10',
+          endDate: '2026-05-20',
+          description: 'A journey through ancient and modern Japan',
+          coverPhoto: '/assets/images/default.svg',
+          userId: 'user1',
+          createdAt: '2026-01-02T10:00:00Z',
+          budget: 4000,
+        },
+        {
+          id: '3',
+          name: 'Bali Beach Retreat',
+          startDate: '2026-07-05',
+          endDate: '2026-07-15',
+          description: 'Relaxing tropical getaway in Indonesia',
+          coverPhoto: '/assets/images/default.svg',
+          userId: 'user1',
+          createdAt: '2026-01-03T10:00:00Z',
+          budget: 3000,
+        },
+        {
+          id: '4',
+          name: 'NYC Weekend',
+          startDate: '2026-02-20',
+          endDate: '2026-02-23',
+          description: 'Quick city escape to the Big Apple',
+          coverPhoto: '/assets/images/default.svg',
+          userId: 'user1',
+          createdAt: '2025-12-28T10:00:00Z',
+          budget: 2000,
+        },
+        {
+          id: '5',
+          name: 'Iceland Northern Lights',
+          startDate: '2026-11-01',
+          endDate: '2026-11-10',
+          description: 'Chasing aurora borealis in the land of ice and fire',
+          coverPhoto: '/assets/images/default.svg',
+          userId: 'user1',
+          createdAt: '2026-01-02T15:00:00Z',
+          budget: 6000,
+        },
+      ];
+
+
+      export const mockDestinations: Destination[] = [
+        {
+          id: 'd1',
+          name: 'Paris',
+          country: 'France',
+          description: 'The City of Light with iconic landmarks and world-class cuisine',
+          image: '/assets/images/default.svg',
+          costIndex: 8,
+          popularity: 10,
+        },
+        {
+          id: 'd2',
+          name: 'Barcelona',
+          country: 'Spain',
+          description: 'Vibrant culture, stunning architecture, and Mediterranean beaches',
+          image: '/assets/images/default.svg',
+          costIndex: 6,
+          popularity: 9,
+        },
+        {
+          id: 'd3',
+          name: 'Santorini',
+          country: 'Greece',
+          description: 'Beautiful whitewashed buildings and breathtaking sunsets',
+          image: '/assets/images/default.svg',
+          costIndex: 7,
+          popularity: 9,
+        },
+        {
+          id: 'd4',
+          name: 'Bangkok',
+          country: 'Thailand',
+          description: 'Bustling city with temples, street food, and vibrant nightlife',
+          image: '/assets/images/default.svg',
+          costIndex: 3,
+          popularity: 8,
+        },
+        {
+          id: 'd5',
+          name: 'Dubai',
+          country: 'UAE',
+          description: 'Luxury shopping, ultramodern architecture, and desert adventures',
+          image: '/assets/images/default.svg',
+          costIndex: 9,
+          popularity: 8,
+        },
+        {
+          id: 'd6',
+          name: 'New York',
+          country: 'USA',
+          description: 'The city that never sleeps with endless entertainment',
+          image: '/assets/images/default.svg',
+          costIndex: 9,
+          popularity: 10,
+        },
+        {
+          id: 'd7',
+          name: 'Lisbon',
+          country: 'Portugal',
+          description: 'Charming coastal city with colorful buildings and rich history',
+          image: '/assets/images/default.svg',
+          costIndex: 5,
+          popularity: 7,
+        },
+        {
+          id: 'd8',
+          name: 'Marrakech',
+          country: 'Morocco',
+          description: 'Exotic markets, palaces, and authentic Moroccan culture',
+          image: '/assets/images/default.svg',
+          costIndex: 4,
+          popularity: 7,
+        },
+        {
+          id: 'd9',
+          name: 'Rome',
+          country: 'Italy',
+          description: 'Ancient ruins, Renaissance art, and authentic Italian cuisine',
+          image: '/assets/images/default.svg',
+          costIndex: 7,
+          popularity: 10,
+        },
+        {
+          id: 'd10',
+          name: 'Amsterdam',
+          country: 'Netherlands',
+          description: 'Canals, museums, and vibrant cultural scene',
+          image: '/assets/images/default.svg',
+          costIndex: 8,
+          popularity: 9,
+        },
+      ];
+
+
+      export const mockCityStops: CityStop[] = [
+        {
+          id: 'cs1',
+          tripId: '1',
+          cityId: 'd1',
+          cityName: 'Paris',
+          country: 'France',
+          startDate: '2026-03-15',
+          endDate: '2026-03-20',
+          image: '/assets/images/default.svg',
+          order: 0,
+          notes: 'Visit Eiffel Tower and Louvre',
+        },
+        {
+          id: 'cs2',
+          tripId: '1',
+          cityId: 'd9',
+          cityName: 'Rome',
+          country: 'Italy',
+          startDate: '2026-03-21',
+          endDate: '2026-03-28',
+          image: '/assets/images/default.svg',
+          order: 1,
+          notes: 'Explore Colosseum and Vatican',
+        },
+      ];
+
+
+      export const mockActivities: Activity[] = [
+        {
+          id: 'a1',
+          name: 'Eiffel Tower Visit',
+          description: 'Iconic iron tower with stunning city views',
+          type: 'sightseeing',
+          cost: 26,
+          duration: 180,
+          image: '/assets/images/default.svg',
+          cityId: 'd1',
+        },
+        {
+          id: 'a2',
+          name: 'Louvre Museum',
+          description: 'World-famous art museum featuring the Mona Lisa',
+          type: 'culture',
+          cost: 17,
+          duration: 240,
+          image: '/assets/images/default.svg',
+          cityId: 'd1',
+        },
+        {
+          id: 'a3',
+          name: 'Seine River Cruise',
+          description: 'Relaxing boat tour along the Seine',
+          type: 'leisure',
+          cost: 15,
+          duration: 120,
+          image: '/assets/images/default.svg',
+          cityId: 'd1',
+        },
+        {
+          id: 'a4',
+          name: 'Colosseum Tour',
+          description: 'Ancient Roman amphitheater guided tour',
+          type: 'sightseeing',
+          cost: 35,
+          duration: 180,
+          image: '/assets/images/default.svg',
+          cityId: 'd9',
+        },
+        {
+          id: 'a5',
+          name: 'Vatican Museums',
+          description: 'Sistine Chapel and Vatican art collections',
+          type: 'culture',
+          cost: 30,
+          duration: 240,
+          image: '/assets/images/default.svg',
+          cityId: 'd9',
+        },
+        {
+          id: 'a6',
+          name: 'Pasta Cooking Class',
+          description: 'Learn to make authentic Italian pasta',
+          type: 'food',
+          cost: 85,
+          duration: 180,
+          image: '/assets/images/default.svg',
+          cityId: 'd9',
+        },
+        {
+          id: 'a7',
+          name: 'Montmartre Walking Tour',
+          description: 'Explore the artistic neighborhood',
+          type: 'sightseeing',
+          cost: 20,
+          duration: 150,
+          image: '/assets/images/default.svg',
+          cityId: 'd1',
+        },
+        {
+          id: 'a8',
+          name: 'Wine Tasting',
+          description: 'French wine tasting experience',
+          type: 'food',
+          cost: 65,
+          duration: 120,
+          image: '/assets/images/default.svg',
+          cityId: 'd1',
+        },
+      ];
+
+
+      export const mockScheduledActivities: ScheduledActivity[] = [
+        {
+          id: 'sa1',
+          activityId: 'a1',
+          cityStopId: 'cs1',
+          date: '2026-03-15',
+          time: '10:00',
+          cost: 26,
+          order: 0,
+        },
+        {
+          id: 'sa2',
+          activityId: 'a2',
+          cityStopId: 'cs1',
+          date: '2026-03-16',
+          time: '09:00',
+          cost: 17,
+          order: 1,
+        },
+      ];
+
+
+      export const mockUserProfile: UserProfile = {
+        id: 'user1',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        photo: '/assets/images/default.svg',
+        language: 'en',
+        savedDestinations: ['d1', 'd2', 'd3'],
+      };
+    components/layout/navigation.tsx: >
+      import { Plane, LayoutDashboard, Map, Settings, User } from
+      'lucide-react';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Separator } from '@/components/ui/separator';
+
+
+      interface NavigationProps {
+        currentView: string;
+        onViewChange: (view: string) => void;
+      }
+
+
+      export function Navigation({ currentView, onViewChange }: NavigationProps)
+      {
+        const navItems = [
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'trips', label: 'My Trips', icon: Map },
+          { id: 'profile', label: 'Profile', icon: User },
+          { id: 'settings', label: 'Settings', icon: Settings },
+        ];
+
+        return (
+          <div className="flex h-full flex-col border-r bg-muted/40">
+            <div className="flex h-14 items-center gap-2 border-b px-4">
+              <Plane className="h-6 w-6 text-primary" />
+              <span className="text-lg font-bold">GlobeTrotter</span>
+            </div>
+            <Separator />
+            <nav className="flex-1 space-y-1 p-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    variant={currentView === item.id ? 'secondary' : 'ghost'}
+                    className="w-full justify-start"
+                    onClick={() => onViewChange(item.id)}
+                    type="button"
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </nav>
+          </div>
+        );
+      }
+    components/layout/header.tsx: |
+      import { Plus, Bell } from 'lucide-react';
+      import { Button } from '@/components/ui/button';
+      import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+      interface HeaderProps {
+        onCreateTrip: (values?: any) => void;
+      }
+
+      export function Header({ onCreateTrip }: HeaderProps) {
+        return (
+          <header className="flex h-14 items-center justify-between border-b bg-background px-6">
+            <h1 className="text-xl font-semibold">Dashboard</h1>
+            <div className="flex items-center gap-2">
+              <Button onClick={onCreateTrip} size="sm" type="button">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Trip
+              </Button>
+              <Button variant="ghost" size="icon" type="button">
+                <Bell className="h-5 w-5" />
+              </Button>
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>JD</AvatarFallback>
+              </Avatar>
+            </div>
+          </header>
+        );
+      }
+    components/trip/trip-card.tsx: >
+      import { Calendar, MapPin, MoreVertical, Edit2, Trash2 } from
+      'lucide-react';
+
+      import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { Trip } from '@/types/trip';
+
+      import { format } from 'date-fns';
+
+
+      interface TripCardProps {
+        trip: Trip;
+        onEdit: (trip: Trip) => void;
+        onDelete: (tripId: string) => void;
+        onView: (tripId: string) => void;
+      }
+
+
+      export function TripCard({ trip, onEdit, onDelete, onView }:
+      TripCardProps) {
+        const startDate = new Date(trip.startDate);
+        const endDate = new Date(trip.endDate);
+        const isUpcoming = startDate > new Date();
+
+        return (
+          <Card className="group cursor-pointer transition-shadow hover:shadow-lg" onClick={() => onView(trip.id)}>
+            <div className="relative h-40 w-full overflow-hidden rounded-t-lg bg-muted">
+              <img src={trip.coverPhoto} alt={trip.name} className="h-full w-full object-cover" />
+              {isUpcoming && (
+                <Badge className="absolute right-2 top-2" variant="secondary">
+                  Upcoming
+                </Badge>
+              )}
+            </div>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-semibold">{trip.name}</h3>
+                <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(trip);
+                    }}
+                    type="button"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(trip.id);
+                    }}
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{trip.description}</p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {format(startDate, 'MMM d')} - {format(endDate, 'MMM d, yyyy')}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    components/trip/destination-card.tsx: >
+      import { MapPin, TrendingUp } from 'lucide-react';
+
+      import { Card, CardContent } from '@/components/ui/card';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { Destination } from '@/types/trip';
+
+
+      interface DestinationCardProps {
+        destination: Destination;
+        onClick: (destination: Destination) => void;
+      }
+
+
+      export function DestinationCard({ destination, onClick }:
+      DestinationCardProps) {
+        return (
+          <Card className="group cursor-pointer transition-shadow hover:shadow-lg" onClick={() => onClick(destination)}>
+            <div className="relative h-40 w-full overflow-hidden rounded-t-lg bg-muted">
+              <img src={destination.image} alt={destination.name} className="h-full w-full object-cover" />
+              <Badge className="absolute left-2 top-2" variant="secondary">
+                Cost: {destination.costIndex}/10
+              </Badge>
+            </div>
+            <CardContent className="p-4">
+              <h3 className="mb-1 text-lg font-semibold">{destination.name}</h3>
+              <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span>{destination.country}</span>
+              </div>
+              <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{destination.description}</p>
+              <div className="flex items-center gap-1 text-sm text-primary">
+                <TrendingUp className="h-4 w-4" />
+                <span>Popularity: {destination.popularity}/10</span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    components/trip/create-trip-dialog.tsx: >
+      import { useState } from 'react';
+
+      import { useForm } from 'react-hook-form';
+
+      import { zodResolver } from '@hookform/resolvers/zod';
+
+      import { z } from 'zod';
+
+      import {
+        Dialog,
+        DialogContent,
+        DialogDescription,
+        DialogFooter,
+        DialogHeader,
+        DialogTitle,
+      } from '@/components/ui/dialog';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Textarea } from '@/components/ui/textarea';
+
+      import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage }
+      from '@/components/ui/form';
+
+      import { Trip } from '@/types/trip';
+
+
+      const tripFormSchema = z.object({
+        name: z.string().min(3, 'Trip name must be at least 3 characters'),
+        startDate: z.string().min(1, 'Start date is required'),
+        endDate: z.string().min(1, 'End date is required'),
+        description: z.string().min(10, 'Description must be at least 10 characters'),
+      });
+
+
+      type TripFormValues = z.infer<typeof tripFormSchema>;
+
+
+      interface CreateTripDialogProps {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        onSubmit: (values: TripFormValues) => void;
+        editTrip?: Trip | null;
+      }
+
+
+      export function CreateTripDialog({ open, onOpenChange, onSubmit, editTrip
+      }: CreateTripDialogProps) {
+        const form = useForm<TripFormValues>({
+          resolver: zodResolver(tripFormSchema),
+          defaultValues: {
+            name: editTrip?.name || '',
+            startDate: editTrip?.startDate || '',
+            endDate: editTrip?.endDate || '',
+            description: editTrip?.description || '',
+          },
+        });
+
+        const handleSubmit = (values: TripFormValues) => {
+          onSubmit(values);
+          form.reset();
+          onOpenChange(false);
+        };
+
+        return (
+          <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>{editTrip ? 'Edit Trip' : 'Create New Trip'}</DialogTitle>
+                <DialogDescription>
+                  {editTrip ? 'Update your trip details below.' : 'Plan your next adventure by filling in the details below.'}
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Trip Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="European Adventure" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe your trip..." rows={3} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">{editTrip ? 'Update Trip' : 'Create Trip'}</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+    components/dashboard/dashboard-view.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { TripCard } from '@/components/trip/trip-card';
+
+      import { DestinationCard } from '@/components/trip/destination-card';
+
+      import { CreateTripDialog } from '@/components/trip/create-trip-dialog';
+
+      import { Trip, Destination } from '@/types/trip';
+
+      import { Plus, Compass } from 'lucide-react';
+
+
+      interface DashboardViewProps {
+        trips: Trip[];
+        destinations: Destination[];
+        onCreateTrip: (values: any) => void;
+        onEditTrip: (tripId: string, values: any) => void;
+        onDeleteTrip: (tripId: string) => void;
+        onViewTrip: (tripId: string) => void;
+      }
+
+
+      export function DashboardView({
+        trips,
+        destinations,
+        onCreateTrip,
+        onEditTrip,
+        onDeleteTrip,
+        onViewTrip,
+      }: DashboardViewProps) {
+        const [createDialogOpen, setCreateDialogOpen] = useState(false);
+        const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+
+        const upcomingTrips = trips.filter((trip) => new Date(trip.startDate) > new Date()).slice(0, 4);
+
+        const handleEdit = (trip: Trip) => {
+          setEditingTrip(trip);
+          setCreateDialogOpen(true);
+        };
+
+        const handleSubmit = (values: any) => {
+          if (editingTrip) {
+            onEditTrip(editingTrip.id, values);
+            setEditingTrip(null);
+          } else {
+            onCreateTrip(values);
+          }
+        };
+
+        const handleDialogClose = (open: boolean) => {
+          setCreateDialogOpen(open);
+          if (!open) {
+            setEditingTrip(null);
+          }
+        };
+
+        return (
+          <div className="space-y-6 p-6">
+            <div>
+              <h2 className="mb-1 text-2xl font-bold">Welcome back!</h2>
+              <p className="text-muted-foreground">Plan your next adventure or continue with your upcoming trips.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Trips</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{trips.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Upcoming Trips</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{upcomingTrips.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Countries Visited</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">12</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Cities Explored</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">28</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Upcoming Trips</h3>
+                <Button size="sm" onClick={() => setCreateDialogOpen(true)} type="button">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Trip
+                </Button>
+              </div>
+              {upcomingTrips.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {upcomingTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onEdit={handleEdit}
+                      onDelete={onDeleteTrip}
+                      onView={onViewTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-10">
+                    <Compass className="mb-4 h-12 w-12 text-muted-foreground" />
+                    <p className="mb-4 text-muted-foreground">No upcoming trips yet. Start planning your next adventure!</p>
+                    <Button onClick={() => setCreateDialogOpen(true)} type="button">
+                      Create Your First Trip
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div>
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold">Recommended Destinations</h3>
+                <p className="text-sm text-muted-foreground">Popular destinations to inspire your next journey</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {destinations.slice(0, 8).map((destination) => (
+                  <DestinationCard key={destination.id} destination={destination} onClick={() => {}} />
+                ))}
+              </div>
+            </div>
+
+            <CreateTripDialog
+              open={createDialogOpen}
+              onOpenChange={handleDialogClose}
+              onSubmit={handleSubmit}
+              editTrip={editingTrip}
+            />
+          </div>
+        );
+      }
+    components/ui/toast.tsx: |+
+      import * as React from "react"
+      import * as ToastPrimitives from "@radix-ui/react-toast"
+      import { cva, type VariantProps } from "class-variance-authority"
+      import { X } from "lucide-react"
+
+      import { cn } from "@/lib/utils"
+
+      const ToastProvider = ToastPrimitives.Provider
+
+      const ToastViewport = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Viewport>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
+      >(({ className, ...props }, ref) => (
+        <ToastPrimitives.Viewport
+          ref={ref}
+          className={cn(
+            "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+            className
+          )}
+          {...props}
+        />
+      ))
+      ToastViewport.displayName = ToastPrimitives.Viewport.displayName
+
+      const toastVariants = cva(
+        "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+        {
+          variants: {
+            variant: {
+              default: "border bg-background text-foreground",
+              destructive:
+                "destructive group border-destructive bg-destructive text-destructive-foreground",
+            },
+          },
+          defaultVariants: {
+            variant: "default",
+          },
+        }
+      )
+
+      const Toast = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Root>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
+          VariantProps<typeof toastVariants>
+      >(({ className, variant, ...props }, ref) => {
+        return (
+          <ToastPrimitives.Root
+            ref={ref}
+            className={cn(toastVariants({ variant }), className)}
+            {...props}
+          />
+        )
+      })
+      Toast.displayName = ToastPrimitives.Root.displayName
+
+      const ToastAction = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Action>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
+      >(({ className, ...props }, ref) => (
+        <ToastPrimitives.Action
+          ref={ref}
+          className={cn(
+            "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+            className
+          )}
+          {...props}
+        />
+      ))
+      ToastAction.displayName = ToastPrimitives.Action.displayName
+
+      const ToastClose = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Close>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>
+      >(({ className, ...props }, ref) => (
+        <ToastPrimitives.Close
+          ref={ref}
+          className={cn(
+            "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+            className
+          )}
+          toast-close=""
+          {...props}
+        >
+          <X className="h-4 w-4" />
+        </ToastPrimitives.Close>
+      ))
+      ToastClose.displayName = ToastPrimitives.Close.displayName
+
+      const ToastTitle = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Title>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
+      >(({ className, ...props }, ref) => (
+        <ToastPrimitives.Title
+          ref={ref}
+          className={cn("text-sm font-semibold [&+div]:text-xs", className)}
+          {...props}
+        />
+      ))
+      ToastTitle.displayName = ToastPrimitives.Title.displayName
+
+      const ToastDescription = React.forwardRef<
+        React.ElementRef<typeof ToastPrimitives.Description>,
+        React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
+      >(({ className, ...props }, ref) => (
+        <ToastPrimitives.Description
+          ref={ref}
+          className={cn("text-sm opacity-90", className)}
+          {...props}
+        />
+      ))
+      ToastDescription.displayName = ToastPrimitives.Description.displayName
+
+      type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
+
+      type ToastActionElement = React.ReactElement<typeof ToastAction>
+
+      export {
+        type ToastProps,
+        type ToastActionElement,
+        ToastProvider,
+        ToastViewport,
+        Toast,
+        ToastTitle,
+        ToastDescription,
+        ToastClose,
+        ToastAction,
+      }
+
+    hooks/use-toast.ts: |+
+      "use client"
+
+      // Inspired by react-hot-toast library
+      import * as React from "react"
+
+      import type {
+        ToastActionElement,
+        ToastProps,
+      } from "@/components/ui/toast"
+
+      const TOAST_LIMIT = 1
+      const TOAST_REMOVE_DELAY = 1000000
+
+      type ToasterToast = ToastProps & {
+        id: string
+        title?: React.ReactNode
+        description?: React.ReactNode
+        action?: ToastActionElement
+      }
+
+      const actionTypes = {
+        ADD_TOAST: "ADD_TOAST",
+        UPDATE_TOAST: "UPDATE_TOAST",
+        DISMISS_TOAST: "DISMISS_TOAST",
+        REMOVE_TOAST: "REMOVE_TOAST",
+      } as const
+
+      let count = 0
+
+      function genId() {
+        count = (count + 1) % Number.MAX_SAFE_INTEGER
+        return count.toString()
+      }
+
+      type ActionType = typeof actionTypes
+
+      type Action =
+        | {
+            type: ActionType["ADD_TOAST"]
+            toast: ToasterToast
+          }
+        | {
+            type: ActionType["UPDATE_TOAST"]
+            toast: Partial<ToasterToast>
+          }
+        | {
+            type: ActionType["DISMISS_TOAST"]
+            toastId?: ToasterToast["id"]
+          }
+        | {
+            type: ActionType["REMOVE_TOAST"]
+            toastId?: ToasterToast["id"]
+          }
+
+      interface State {
+        toasts: ToasterToast[]
+      }
+
+      const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+      const addToRemoveQueue = (toastId: string) => {
+        if (toastTimeouts.has(toastId)) {
+          return
+        }
+
+        const timeout = setTimeout(() => {
+          toastTimeouts.delete(toastId)
+          dispatch({
+            type: "REMOVE_TOAST",
+            toastId: toastId,
+          })
+        }, TOAST_REMOVE_DELAY)
+
+        toastTimeouts.set(toastId, timeout)
+      }
+
+      export const reducer = (state: State, action: Action): State => {
+        switch (action.type) {
+          case "ADD_TOAST":
+            return {
+              ...state,
+              toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+            }
+
+          case "UPDATE_TOAST":
+            return {
+              ...state,
+              toasts: state.toasts.map((t) =>
+                t.id === action.toast.id ? { ...t, ...action.toast } : t
+              ),
+            }
+
+          case "DISMISS_TOAST": {
+            const { toastId } = action
+
+            // ! Side effects ! - This could be extracted into a dismissToast() action,
+            // but I'll keep it here for simplicity
+            if (toastId) {
+              addToRemoveQueue(toastId)
+            } else {
+              state.toasts.forEach((toast) => {
+                addToRemoveQueue(toast.id)
+              })
+            }
+
+            return {
+              ...state,
+              toasts: state.toasts.map((t) =>
+                t.id === toastId || toastId === undefined
+                  ? {
+                      ...t,
+                      open: false,
+                    }
+                  : t
+              ),
+            }
+          }
+          case "REMOVE_TOAST":
+            if (action.toastId === undefined) {
+              return {
+                ...state,
+                toasts: [],
+              }
+            }
+            return {
+              ...state,
+              toasts: state.toasts.filter((t) => t.id !== action.toastId),
+            }
+        }
+      }
+
+      const listeners: Array<(state: State) => void> = []
+
+      let memoryState: State = { toasts: [] }
+
+      function dispatch(action: Action) {
+        memoryState = reducer(memoryState, action)
+        listeners.forEach((listener) => {
+          listener(memoryState)
+        })
+      }
+
+      type Toast = Omit<ToasterToast, "id">
+
+      function toast({ ...props }: Toast) {
+        const id = genId()
+
+        const update = (props: ToasterToast) =>
+          dispatch({
+            type: "UPDATE_TOAST",
+            toast: { ...props, id },
+          })
+        const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+        dispatch({
+          type: "ADD_TOAST",
+          toast: {
+            ...props,
+            id,
+            open: true,
+            onOpenChange: (open) => {
+              if (!open) dismiss()
+            },
+          },
+        })
+
+        return {
+          id: id,
+          dismiss,
+          update,
+        }
+      }
+
+      function useToast() {
+        const [state, setState] = React.useState<State>(memoryState)
+
+        React.useEffect(() => {
+          listeners.push(setState)
+          return () => {
+            const index = listeners.indexOf(setState)
+            if (index > -1) {
+              listeners.splice(index, 1)
+            }
+          }
+        }, [state])
+
+        return {
+          ...state,
+          toast,
+          dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+        }
+      }
+
+      export { useToast, toast }
+
+    components/ui/toaster.tsx: |+
+      import { useToast } from "@/hooks/use-toast"
+      import {
+        Toast,
+        ToastClose,
+        ToastDescription,
+        ToastProvider,
+        ToastTitle,
+        ToastViewport,
+      } from "@/components/ui/toast"
+
+      export function Toaster() {
+        const { toasts } = useToast()
+
+        return (
+          <ToastProvider>
+            {toasts.map(function ({ id, title, description, action, ...props }) {
+              return (
+                <Toast key={id} {...props}>
+                  <div className="grid gap-1">
+                    {title && <ToastTitle>{title}</ToastTitle>}
+                    {description && (
+                      <ToastDescription>{description}</ToastDescription>
+                    )}
+                  </div>
+                  {action}
+                  <ToastClose />
+                </Toast>
+              )
+            })}
+            <ToastViewport />
+          </ToastProvider>
+        )
+      }
+
+    components/ui/tabs.tsx: |+
+      "use client"
+
+      import * as React from "react"
+      import * as TabsPrimitive from "@radix-ui/react-tabs"
+
+      import { cn } from "@/lib/utils"
+
+      const Tabs = TabsPrimitive.Root
+
+      const TabsList = React.forwardRef<
+        React.ElementRef<typeof TabsPrimitive.List>,
+        React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+      >(({ className, ...props }, ref) => (
+        <TabsPrimitive.List
+          ref={ref}
+          className={cn(
+            "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+            className
+          )}
+          {...props}
+        />
+      ))
+      TabsList.displayName = TabsPrimitive.List.displayName
+
+      const TabsTrigger = React.forwardRef<
+        React.ElementRef<typeof TabsPrimitive.Trigger>,
+        React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+      >(({ className, ...props }, ref) => (
+        <TabsPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow",
+            className
+          )}
+          {...props}
+        />
+      ))
+      TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+
+      const TabsContent = React.forwardRef<
+        React.ElementRef<typeof TabsPrimitive.Content>,
+        React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+      >(({ className, ...props }, ref) => (
+        <TabsPrimitive.Content
+          ref={ref}
+          className={cn(
+            "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            className
+          )}
+          {...props}
+        />
+      ))
+      TabsContent.displayName = TabsPrimitive.Content.displayName
+
+      export { Tabs, TabsList, TabsTrigger, TabsContent }
+
+    components/ui/scroll-area.tsx: >+
+      import * as React from "react"
+
+      import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
+
+
+      import { cn } from "@/lib/utils"
+
+
+      const ScrollArea = React.forwardRef<
+        React.ElementRef<typeof ScrollAreaPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
+      >(({ className, children, ...props }, ref) => (
+        <ScrollAreaPrimitive.Root
+          ref={ref}
+          className={cn("relative overflow-hidden", className)}
+          {...props}
+        >
+          <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+            {children}
+          </ScrollAreaPrimitive.Viewport>
+          <ScrollBar />
+          <ScrollAreaPrimitive.Corner />
+        </ScrollAreaPrimitive.Root>
+      ))
+
+      ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
+
+
+      const ScrollBar = React.forwardRef<
+        React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
+        React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
+      >(({ className, orientation = "vertical", ...props }, ref) => (
+        <ScrollAreaPrimitive.ScrollAreaScrollbar
+          ref={ref}
+          orientation={orientation}
+          className={cn(
+            "flex touch-none select-none transition-colors",
+            orientation === "vertical" &&
+              "h-full w-2.5 border-l border-l-transparent p-[1px]",
+            orientation === "horizontal" &&
+              "h-2.5 flex-col border-t border-t-transparent p-[1px]",
+            className
+          )}
+          {...props}
+        >
+          <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+        </ScrollAreaPrimitive.ScrollAreaScrollbar>
+      ))
+
+      ScrollBar.displayName =
+      ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
+
+
+      export { ScrollArea, ScrollBar }
+
+    components/ui/popover.tsx: |+
+      "use client"
+
+      import * as React from "react"
+      import * as PopoverPrimitive from "@radix-ui/react-popover"
+
+      import { cn } from "@/lib/utils"
+
+      const Popover = PopoverPrimitive.Root
+
+      const PopoverTrigger = PopoverPrimitive.Trigger
+
+      const PopoverAnchor = PopoverPrimitive.Anchor
+
+      const PopoverContent = React.forwardRef<
+        React.ElementRef<typeof PopoverPrimitive.Content>,
+        React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
+      >(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Content
+            ref={ref}
+            align={align}
+            sideOffset={sideOffset}
+            className={cn(
+              "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-popover-content-transform-origin]",
+              className
+            )}
+            {...props}
+          />
+        </PopoverPrimitive.Portal>
+      ))
+      PopoverContent.displayName = PopoverPrimitive.Content.displayName
+
+      export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor }
+
+    components/ui/alert.tsx: |+
+      import * as React from "react"
+      import { cva, type VariantProps } from "class-variance-authority"
+
+      import { cn } from "@/lib/utils"
+
+      const alertVariants = cva(
+        "relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
+        {
+          variants: {
+            variant: {
+              default: "bg-background text-foreground",
+              destructive:
+                "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+            },
+          },
+          defaultVariants: {
+            variant: "default",
+          },
+        }
+      )
+
+      const Alert = React.forwardRef<
+        HTMLDivElement,
+        React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
+      >(({ className, variant, ...props }, ref) => (
+        <div
+          ref={ref}
+          role="alert"
+          className={cn(alertVariants({ variant }), className)}
+          {...props}
+        />
+      ))
+      Alert.displayName = "Alert"
+
+      const AlertTitle = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLHeadingElement>
+      >(({ className, ...props }, ref) => (
+        <h5
+          ref={ref}
+          className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+          {...props}
+        />
+      ))
+      AlertTitle.displayName = "AlertTitle"
+
+      const AlertDescription = React.forwardRef<
+        HTMLParagraphElement,
+        React.HTMLAttributes<HTMLParagraphElement>
+      >(({ className, ...props }, ref) => (
+        <div
+          ref={ref}
+          className={cn("text-sm [&_p]:leading-relaxed", className)}
+          {...props}
+        />
+      ))
+      AlertDescription.displayName = "AlertDescription"
+
+      export { Alert, AlertTitle, AlertDescription }
+
+    components/ui/progress.tsx: |+
+      import * as React from "react"
+      import * as ProgressPrimitive from "@radix-ui/react-progress"
+
+      import { cn } from "@/lib/utils"
+
+      const Progress = React.forwardRef<
+        React.ElementRef<typeof ProgressPrimitive.Root>,
+        React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
+      >(({ className, value, ...props }, ref) => (
+        <ProgressPrimitive.Root
+          ref={ref}
+          className={cn(
+            "relative h-2 w-full overflow-hidden rounded-full bg-primary/20",
+            className
+          )}
+          {...props}
+        >
+          <ProgressPrimitive.Indicator
+            className="h-full w-full flex-1 bg-primary transition-all"
+            style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+          />
+        </ProgressPrimitive.Root>
+      ))
+      Progress.displayName = ProgressPrimitive.Root.displayName
+
+      export { Progress }
+
+    components/ui/calendar.tsx: >+
+      import * as React from "react"
+
+      import {
+        ChevronDownIcon,
+        ChevronLeftIcon,
+        ChevronRightIcon,
+      } from "lucide-react"
+
+      import { DayButton, DayPicker, getDefaultClassNames } from
+      "react-day-picker"
+
+
+      import { cn } from "@/lib/utils"
+
+      import { Button, buttonVariants } from "@/components/ui/button"
+
+
+      function Calendar({
+        className,
+        classNames,
+        showOutsideDays = true,
+        captionLayout = "label",
+        buttonVariant = "ghost",
+        formatters,
+        components,
+        ...props
+      }: React.ComponentProps<typeof DayPicker> & {
+        buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+      }) {
+        const defaultClassNames = getDefaultClassNames()
+
+        return (
+          <DayPicker
+            showOutsideDays={showOutsideDays}
+            className={cn(
+              "bg-background group/calendar p-3 [--cell-size:2rem] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+              String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
+              String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+              className
+            )}
+            captionLayout={captionLayout}
+            formatters={{
+              formatMonthDropdown: (date) =>
+                date.toLocaleString("default", { month: "short" }),
+              ...formatters,
+            }}
+            classNames={{
+              root: cn("w-fit", defaultClassNames.root),
+              months: cn(
+                "relative flex flex-col gap-4 md:flex-row",
+                defaultClassNames.months
+              ),
+              month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
+              nav: cn(
+                "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
+                defaultClassNames.nav
+              ),
+              button_previous: cn(
+                buttonVariants({ variant: buttonVariant }),
+                "h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50",
+                defaultClassNames.button_previous
+              ),
+              button_next: cn(
+                buttonVariants({ variant: buttonVariant }),
+                "h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50",
+                defaultClassNames.button_next
+              ),
+              month_caption: cn(
+                "flex h-[--cell-size] w-full items-center justify-center px-[--cell-size]",
+                defaultClassNames.month_caption
+              ),
+              dropdowns: cn(
+                "flex h-[--cell-size] w-full items-center justify-center gap-1.5 text-sm font-medium",
+                defaultClassNames.dropdowns
+              ),
+              dropdown_root: cn(
+                "has-focus:border-ring border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] relative rounded-md border",
+                defaultClassNames.dropdown_root
+              ),
+              dropdown: cn(
+                "bg-popover absolute inset-0 opacity-0",
+                defaultClassNames.dropdown
+              ),
+              caption_label: cn(
+                "select-none font-medium",
+                captionLayout === "label"
+                  ? "text-sm"
+                  : "[&>svg]:text-muted-foreground flex h-8 items-center gap-1 rounded-md pl-2 pr-1 text-sm [&>svg]:size-3.5",
+                defaultClassNames.caption_label
+              ),
+              table: "w-full border-collapse",
+              weekdays: cn("flex", defaultClassNames.weekdays),
+              weekday: cn(
+                "text-muted-foreground flex-1 select-none rounded-md text-[0.8rem] font-normal",
+                defaultClassNames.weekday
+              ),
+              week: cn("mt-2 flex w-full", defaultClassNames.week),
+              week_number_header: cn(
+                "w-[--cell-size] select-none",
+                defaultClassNames.week_number_header
+              ),
+              week_number: cn(
+                "text-muted-foreground select-none text-[0.8rem]",
+                defaultClassNames.week_number
+              ),
+              day: cn(
+                "group/day relative aspect-square h-full w-full select-none p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md",
+                defaultClassNames.day
+              ),
+              range_start: cn(
+                "bg-accent rounded-l-md",
+                defaultClassNames.range_start
+              ),
+              range_middle: cn("rounded-none", defaultClassNames.range_middle),
+              range_end: cn("bg-accent rounded-r-md", defaultClassNames.range_end),
+              today: cn(
+                "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
+                defaultClassNames.today
+              ),
+              outside: cn(
+                "text-muted-foreground aria-selected:text-muted-foreground",
+                defaultClassNames.outside
+              ),
+              disabled: cn(
+                "text-muted-foreground opacity-50",
+                defaultClassNames.disabled
+              ),
+              hidden: cn("invisible", defaultClassNames.hidden),
+              ...classNames,
+            }}
+            components={{
+              Root: ({ className, rootRef, ...props }) => {
+                return (
+                  <div
+                    data-slot="calendar"
+                    ref={rootRef}
+                    className={cn(className)}
+                    {...props}
+                  />
+                )
+              },
+              Chevron: ({ className, orientation, ...props }) => {
+                if (orientation === "left") {
+                  return (
+                    <ChevronLeftIcon className={cn("size-4", className)} {...props} />
+                  )
+                }
+
+                if (orientation === "right") {
+                  return (
+                    <ChevronRightIcon
+                      className={cn("size-4", className)}
+                      {...props}
+                    />
+                  )
+                }
+
+                return (
+                  <ChevronDownIcon className={cn("size-4", className)} {...props} />
+                )
+              },
+              DayButton: CalendarDayButton,
+              WeekNumber: ({ children, ...props }) => {
+                return (
+                  <td {...props}>
+                    <div className="flex size-[--cell-size] items-center justify-center text-center">
+                      {children}
+                    </div>
+                  </td>
+                )
+              },
+              ...components,
+            }}
+            {...props}
+          />
+        )
+      }
+
+
+      function CalendarDayButton({
+        className,
+        day,
+        modifiers,
+        ...props
+      }: React.ComponentProps<typeof DayButton>) {
+        const defaultClassNames = getDefaultClassNames()
+
+        const ref = React.useRef<HTMLButtonElement>(null)
+        React.useEffect(() => {
+          if (modifiers.focused) ref.current?.focus()
+        }, [modifiers.focused])
+
+        return (
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="icon"
+            data-day={day.date.toLocaleDateString()}
+            data-selected-single={
+              modifiers.selected &&
+              !modifiers.range_start &&
+              !modifiers.range_end &&
+              !modifiers.range_middle
+            }
+            data-range-start={modifiers.range_start}
+            data-range-end={modifiers.range_end}
+            data-range-middle={modifiers.range_middle}
+            className={cn(
+              "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 flex aspect-square h-auto w-full min-w-[--cell-size] flex-col gap-1 font-normal leading-none data-[range-end=true]:rounded-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] [&>span]:text-xs [&>span]:opacity-70",
+              defaultClassNames.day,
+              className
+            )}
+            {...props}
+          />
+        )
+      }
+
+
+      export { Calendar, CalendarDayButton }
+
+    components/trip/trip-detail-view.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { Tabs, TabsContent, TabsList, TabsTrigger } from
+      '@/components/ui/tabs';
+
+      import { Trip, CityStop, ScheduledActivity } from '@/types/trip';
+
+      import { ArrowLeft, Plus, Share2, Calendar, DollarSign } from
+      'lucide-react';
+
+      import { CityStopList } from './city-stop-list';
+
+      import { AddCityDialog } from './add-city-dialog';
+
+      import { BudgetOverview } from './budget-overview';
+
+      import { ShareTripDialog } from './share-trip-dialog';
+
+      import { format } from 'date-fns';
+
+
+      interface TripDetailViewProps {
+        trip: Trip;
+        cityStops: CityStop[];
+        scheduledActivities: ScheduledActivity[];
+        onBack: () => void;
+        onAddCity: (cityId: string, startDate: string, endDate: string) => void;
+        onRemoveCity: (cityStopId: string) => void;
+        onReorderCities: (cityStops: CityStop[]) => void;
+        onAddActivity: (cityStopId: string, activityId: string, date: string, time: string) => void;
+        onRemoveActivity: (activityId: string) => void;
+        onUpdateBudget: (budget: number) => void;
+      }
+
+
+      export function TripDetailView({
+        trip,
+        cityStops,
+        scheduledActivities,
+        onBack,
+        onAddCity,
+        onRemoveCity,
+        onReorderCities,
+        onAddActivity,
+        onRemoveActivity,
+        onUpdateBudget,
+      }: TripDetailViewProps) {
+        const [addCityOpen, setAddCityOpen] = useState(false);
+        const [shareOpen, setShareOpen] = useState(false);
+
+        const startDate = new Date(trip.startDate);
+        const endDate = new Date(trip.endDate);
+        const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        return (
+          <div className="space-y-6 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" onClick={onBack} type="button">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold">{trip.name}</h1>
+                  <p className="text-muted-foreground">
+                    {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')} · {duration} days
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShareOpen(true)} type="button">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share Trip
+                </Button>
+                <Button onClick={() => setAddCityOpen(true)} type="button">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add City
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Cities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{cityStops.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Activities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{scheduledActivities.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Budget</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">${trip.budget || 0}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Tabs defaultValue="itinerary" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
+                <TabsTrigger value="budget">Budget</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
+              <TabsContent value="itinerary" className="space-y-4">
+                <CityStopList
+                  cityStops={cityStops}
+                  scheduledActivities={scheduledActivities}
+                  onRemoveCity={onRemoveCity}
+                  onReorderCities={onReorderCities}
+                  onAddActivity={onAddActivity}
+                  onRemoveActivity={onRemoveActivity}
+                />
+              </TabsContent>
+              <TabsContent value="budget">
+                <BudgetOverview trip={trip} scheduledActivities={scheduledActivities} onUpdateBudget={onUpdateBudget} />
+              </TabsContent>
+              <TabsContent value="details">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Trip Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h3 className="mb-2 font-semibold">Description</h3>
+                      <p className="text-muted-foreground">{trip.description}</p>
+                    </div>
+                    <div>
+                      <h3 className="mb-2 font-semibold">Duration</h3>
+                      <p className="text-muted-foreground">{duration} days</p>
+                    </div>
+                    <div>
+                      <h3 className="mb-2 font-semibold">Created</h3>
+                      <p className="text-muted-foreground">{format(new Date(trip.createdAt), 'PPP')}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            <AddCityDialog open={addCityOpen} onOpenChange={setAddCityOpen} onAddCity={onAddCity} tripDates={{ start: trip.startDate, end: trip.endDate }} />
+            <ShareTripDialog open={shareOpen} onOpenChange={setShareOpen} trip={trip} />
+          </div>
+        );
+      }
+    components/trip/city-stop-list.tsx: >
+      import { useState } from 'react';
+
+      import { DndContext, closestCenter, KeyboardSensor, PointerSensor,
+      useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+
+      import { arrayMove, SortableContext, sortableKeyboardCoordinates,
+      verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+      import { CityStop, ScheduledActivity } from '@/types/trip';
+
+      import { CityStopCard } from './city-stop-card';
+
+
+      interface CityStopListProps {
+        cityStops: CityStop[];
+        scheduledActivities: ScheduledActivity[];
+        onRemoveCity: (cityStopId: string) => void;
+        onReorderCities: (cityStops: CityStop[]) => void;
+        onAddActivity: (cityStopId: string, activityId: string, date: string, time: string) => void;
+        onRemoveActivity: (activityId: string) => void;
+      }
+
+
+      export function CityStopList({
+        cityStops,
+        scheduledActivities,
+        onRemoveCity,
+        onReorderCities,
+        onAddActivity,
+        onRemoveActivity,
+      }: CityStopListProps) {
+        const sensors = useSensors(
+          useSensor(PointerSensor),
+          useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+          })
+        );
+
+        const handleDragEnd = (event: DragEndEvent) => {
+          const { active, over } = event;
+
+          if (over && active.id !== over.id) {
+            const oldIndex = cityStops.findIndex((stop) => stop.id === active.id);
+            const newIndex = cityStops.findIndex((stop) => stop.id === over.id);
+            const reordered = arrayMove(cityStops, oldIndex, newIndex).map((stop, index) => ({
+              ...stop,
+              order: index,
+            }));
+            onReorderCities(reordered);
+          }
+        };
+
+        if (cityStops.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+              <p className="mb-2 text-lg font-semibold">No cities added yet</p>
+              <p className="text-sm text-muted-foreground">Add cities to start building your itinerary</p>
+            </div>
+          );
+        }
+
+        return (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={cityStops.map((stop) => stop.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-4">
+                {cityStops.map((cityStop) => {
+                  const activities = scheduledActivities.filter((a) => a.cityStopId === cityStop.id);
+                  return (
+                    <CityStopCard
+                      key={cityStop.id}
+                      cityStop={cityStop}
+                      activities={activities}
+                      onRemove={() => onRemoveCity(cityStop.id)}
+                      onAddActivity={onAddActivity}
+                      onRemoveActivity={onRemoveActivity}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
+        );
+      }
+    components/trip/city-stop-card.tsx: >
+      import { useState } from 'react';
+
+      import { useSortable } from '@dnd-kit/sortable';
+
+      import { CSS } from '@dnd-kit/utilities';
+
+      import { Card, CardContent, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { CityStop, ScheduledActivity } from '@/types/trip';
+
+      import { GripVertical, MapPin, Calendar, Plus, Trash2 } from
+      'lucide-react';
+
+      import { AddActivityDialog } from './add-activity-dialog';
+
+      import { ActivityList } from './activity-list';
+
+      import { format } from 'date-fns';
+
+
+      interface CityStopCardProps {
+        cityStop: CityStop;
+        activities: ScheduledActivity[];
+        onRemove: () => void;
+        onAddActivity: (cityStopId: string, activityId: string, date: string, time: string) => void;
+        onRemoveActivity: (activityId: string) => void;
+      }
+
+
+      export function CityStopCard({ cityStop, activities, onRemove,
+      onAddActivity, onRemoveActivity }: CityStopCardProps) {
+        const [addActivityOpen, setAddActivityOpen] = useState(false);
+        const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: cityStop.id });
+
+        const style = {
+          transform: CSS.Transform.toString(transform),
+          transition,
+        };
+
+        const startDate = new Date(cityStop.startDate);
+        const endDate = new Date(cityStop.endDate);
+        const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+        return (
+          <div ref={setNodeRef} style={style}>
+            <Card>
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <button
+                    className="mt-1 cursor-grab touch-none active:cursor-grabbing"
+                    {...attributes}
+                    {...listeners}
+                    type="button"
+                  >
+                    <GripVertical className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                  <div className="relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                    <img src={cityStop.image} alt={cityStop.cityName} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl">{cityStop.cityName}</CardTitle>
+                    <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span>{cityStop.country}</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {format(startDate, 'MMM d')} - {format(endDate, 'MMM d')}
+                        </span>
+                      </div>
+                      <Badge variant="secondary">{duration} days</Badge>
+                    </div>
+                    {cityStop.notes && <p className="mt-2 text-sm text-muted-foreground">{cityStop.notes}</p>}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setAddActivityOpen(true)} type="button">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Activity
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onRemove} type="button">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              {activities.length > 0 && (
+                <CardContent>
+                  <ActivityList activities={activities} onRemove={onRemoveActivity} cityStopId={cityStop.id} />
+                </CardContent>
+              )}
+            </Card>
+            <AddActivityDialog
+              open={addActivityOpen}
+              onOpenChange={setAddActivityOpen}
+              cityStop={cityStop}
+              onAddActivity={onAddActivity}
+            />
+          </div>
+        );
+      }
+    components/trip/activity-list.tsx: >
+      import { Badge } from '@/components/ui/badge';
+
+      import { Button } from '@/components/ui/button';
+
+      import { ScheduledActivity } from '@/types/trip';
+
+      import { mockActivities } from '@/lib/mock-data';
+
+      import { Clock, DollarSign, Trash2 } from 'lucide-react';
+
+
+      interface ActivityListProps {
+        activities: ScheduledActivity[];
+        onRemove: (activityId: string) => void;
+        cityStopId: string;
+      }
+
+
+      export function ActivityList({ activities, onRemove }: ActivityListProps)
+      {
+        const groupedByDate = activities.reduce((acc, activity) => {
+          if (!acc[activity.date]) {
+            acc[activity.date] = [];
+          }
+          acc[activity.date].push(activity);
+          return acc;
+        }, {} as Record<string, ScheduledActivity[]>);
+
+        return (
+          <div className="space-y-4">
+            {Object.entries(groupedByDate).map(([date, dayActivities]) => (
+              <div key={date}>
+                <h4 className="mb-2 font-semibold">{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h4>
+                <div className="space-y-2">
+                  {dayActivities
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .map((scheduledActivity) => {
+                      const activity = mockActivities.find((a) => a.id === scheduledActivity.activityId);
+                      if (!activity) return null;
+                      return (
+                        <div key={scheduledActivity.id} className="flex items-center gap-3 rounded-lg border p-3">
+                          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                            <img src={activity.image} alt={activity.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h5 className="font-semibold">{activity.name}</h5>
+                                <p className="text-sm text-muted-foreground">{activity.description}</p>
+                              </div>
+                              <Button variant="ghost" size="icon" onClick={() => onRemove(scheduledActivity.id)} type="button">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{scheduledActivity.time}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                <span>${scheduledActivity.cost}</span>
+                              </div>
+                              <Badge variant="secondary">{activity.type}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    components/trip/add-city-dialog.tsx: >
+      import { useState } from 'react';
+
+      import { Dialog, DialogContent, DialogDescription, DialogHeader,
+      DialogTitle } from '@/components/ui/dialog';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Label } from '@/components/ui/label';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { ScrollArea } from '@/components/ui/scroll-area';
+
+      import { mockDestinations } from '@/lib/mock-data';
+
+      import { Search, MapPin, TrendingUp } from 'lucide-react';
+
+
+      interface AddCityDialogProps {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        onAddCity: (cityId: string, startDate: string, endDate: string) => void;
+        tripDates: { start: string; end: string };
+      }
+
+
+      export function AddCityDialog({ open, onOpenChange, onAddCity, tripDates
+      }: AddCityDialogProps) {
+        const [searchQuery, setSearchQuery] = useState('');
+        const [selectedCity, setSelectedCity] = useState<string | null>(null);
+        const [startDate, setStartDate] = useState('');
+        const [endDate, setEndDate] = useState('');
+
+        const filteredDestinations = mockDestinations.filter(
+          (dest) =>
+            dest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            dest.country.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        const handleAdd = () => {
+          if (selectedCity && startDate && endDate) {
+            onAddCity(selectedCity, startDate, endDate);
+            setSelectedCity(null);
+            setStartDate('');
+            setEndDate('');
+            setSearchQuery('');
+            onOpenChange(false);
+          }
+        };
+
+        return (
+          <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add City to Trip</DialogTitle>
+                <DialogDescription>Search for a city and set the dates for your visit</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search cities..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="h-[300px] rounded-md border p-4">
+                  <div className="space-y-2">
+                    {filteredDestinations.map((dest) => (
+                      <button
+                        key={dest.id}
+                        className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted ${
+                          selectedCity === dest.id ? 'border-primary bg-muted' : ''
+                        }`}
+                        onClick={() => setSelectedCity(dest.id)}
+                        type="button"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                            <img src={dest.image} alt={dest.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{dest.name}</h4>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span>{dest.country}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{dest.description}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="secondary">Cost: {dest.costIndex}/10</Badge>
+                              <Badge variant="outline">
+                                <TrendingUp className="mr-1 h-3 w-3" />
+                                {dest.popularity}/10
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+                {selectedCity && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Start Date</Label>
+                      <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={tripDates.start} max={tripDates.end} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>End Date</Label>
+                      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || tripDates.start} max={tripDates.end} />
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAdd} disabled={!selectedCity || !startDate || !endDate} type="button">
+                    Add City
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+    components/trip/add-activity-dialog.tsx: >
+      import { useState } from 'react';
+
+      import { Dialog, DialogContent, DialogDescription, DialogHeader,
+      DialogTitle } from '@/components/ui/dialog';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Label } from '@/components/ui/label';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { ScrollArea } from '@/components/ui/scroll-area';
+
+      import { mockActivities } from '@/lib/mock-data';
+
+      import { CityStop } from '@/types/trip';
+
+      import { Search, Clock, DollarSign } from 'lucide-react';
+
+
+      interface AddActivityDialogProps {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        cityStop: CityStop;
+        onAddActivity: (cityStopId: string, activityId: string, date: string, time: string) => void;
+      }
+
+
+      export function AddActivityDialog({ open, onOpenChange, cityStop,
+      onAddActivity }: AddActivityDialogProps) {
+        const [searchQuery, setSearchQuery] = useState('');
+        const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+        const [date, setDate] = useState('');
+        const [time, setTime] = useState('09:00');
+
+        const cityActivities = mockActivities.filter((activity) => activity.cityId === cityStop.cityId);
+        const filteredActivities = cityActivities.filter(
+          (activity) =>
+            activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            activity.type.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        const handleAdd = () => {
+          if (selectedActivity && date && time) {
+            onAddActivity(cityStop.id, selectedActivity, date, time);
+            setSelectedActivity(null);
+            setDate('');
+            setTime('09:00');
+            setSearchQuery('');
+            onOpenChange(false);
+          }
+        };
+
+        return (
+          <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add Activity in {cityStop.cityName}</DialogTitle>
+                <DialogDescription>Browse activities and schedule them for your trip</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search activities..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="h-[300px] rounded-md border p-4">
+                  <div className="space-y-2">
+                    {filteredActivities.map((activity) => (
+                      <button
+                        key={activity.id}
+                        className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted ${
+                          selectedActivity === activity.id ? 'border-primary bg-muted' : ''
+                        }`}
+                        onClick={() => setSelectedActivity(activity.id)}
+                        type="button"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                            <img src={activity.image} alt={activity.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{activity.name}</h4>
+                            <p className="text-sm text-muted-foreground">{activity.description}</p>
+                            <div className="mt-2 flex items-center gap-3 text-sm">
+                              <Badge variant="secondary">{activity.type}</Badge>
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <DollarSign className="h-3 w-3" />
+                                <span>${activity.cost}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span>{activity.duration} min</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+                {selectedActivity && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Date</Label>
+                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} min={cityStop.startDate} max={cityStop.endDate} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Time</Label>
+                      <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAdd} disabled={!selectedActivity || !date || !time} type="button">
+                    Add Activity
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+    components/trip/budget-overview.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Label } from '@/components/ui/label';
+
+      import { Progress } from '@/components/ui/progress';
+
+      import { Alert, AlertDescription } from '@/components/ui/alert';
+
+      import { Trip, ScheduledActivity } from '@/types/trip';
+
+      import { mockActivities } from '@/lib/mock-data';
+
+      import { DollarSign, AlertCircle, Edit2, Check } from 'lucide-react';
+
+      import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
+      BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+
+      interface BudgetOverviewProps {
+        trip: Trip;
+        scheduledActivities: ScheduledActivity[];
+        onUpdateBudget: (budget: number) => void;
+      }
+
+
+      export function BudgetOverview({ trip, scheduledActivities, onUpdateBudget
+      }: BudgetOverviewProps) {
+        const [editingBudget, setEditingBudget] = useState(false);
+        const [newBudget, setNewBudget] = useState(trip.budget?.toString() || '0');
+
+        const totalSpent = scheduledActivities.reduce((sum, activity) => sum + activity.cost, 0);
+        const transportCost = 500;
+        const stayCost = 800;
+        const activitiesCost = totalSpent;
+        const mealsCost = 450;
+        const totalCost = transportCost + stayCost + activitiesCost + mealsCost;
+
+        const budgetData = [
+          { name: 'Transport', value: transportCost, color: '#3b82f6' },
+          { name: 'Stay', value: stayCost, color: '#8b5cf6' },
+          { name: 'Activities', value: activitiesCost, color: '#10b981' },
+          { name: 'Meals', value: mealsCost, color: '#f59e0b' },
+        ];
+
+        const dailySpending = scheduledActivities.reduce((acc, activity) => {
+          const date = activity.date;
+          if (!acc[date]) {
+            acc[date] = 0;
+          }
+          acc[date] += activity.cost;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const barChartData = Object.entries(dailySpending).map(([date, amount]) => ({
+          date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          amount,
+        }));
+
+        const budgetPercentage = trip.budget ? (totalCost / trip.budget) * 100 : 0;
+        const isOverBudget = budgetPercentage > 100;
+
+        const handleSaveBudget = () => {
+          const budget = parseFloat(newBudget);
+          if (!isNaN(budget) && budget > 0) {
+            onUpdateBudget(budget);
+            setEditingBudget(false);
+          }
+        };
+
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Budget Summary</CardTitle>
+                  {!editingBudget ? (
+                    <Button variant="outline" size="sm" onClick={() => setEditingBudget(true)} type="button">
+                      <Edit2 className="mr-2 h-4 w-4" />
+                      Edit Budget
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={newBudget}
+                        onChange={(e) => setNewBudget(e.target.value)}
+                        className="w-32"
+                        placeholder="Budget"
+                      />
+                      <Button size="sm" onClick={handleSaveBudget} type="button">
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Budget</p>
+                    <p className="text-3xl font-bold">${trip.budget || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                    <p className="text-3xl font-bold">${totalCost}</p>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm">Budget Progress</span>
+                    <span className="text-sm font-semibold">{budgetPercentage.toFixed(1)}%</span>
+                  </div>
+                  <Progress value={Math.min(budgetPercentage, 100)} className={isOverBudget ? 'bg-red-100' : ''} />
+                </div>
+                {isOverBudget && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>You are over budget by ${(totalCost - (trip.budget || 0)).toFixed(2)}</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Spending by Category</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={budgetData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value">
+                        {budgetData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daily Spending</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={barChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="amount" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Category Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {budgetData.map((category) => (
+                    <div key={category.name}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-medium">{category.name}</span>
+                        <span>${category.value}</span>
+                      </div>
+                      <Progress value={trip.budget ? (category.value / trip.budget) * 100 : 0} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+    components/trip/share-trip-dialog.tsx: >
+      import { useState } from 'react';
+
+      import { Dialog, DialogContent, DialogDescription, DialogHeader,
+      DialogTitle } from '@/components/ui/dialog';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { useToast } from '@/hooks/use-toast';
+
+      import { Trip } from '@/types/trip';
+
+      import { Share2, Copy, Check } from 'lucide-react';
+
+      import { FaFacebook, FaTwitter, FaWhatsapp } from 'react-icons/fa';
+
+
+      interface ShareTripDialogProps {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        trip: Trip;
+      }
+
+
+      export function ShareTripDialog({ open, onOpenChange, trip }:
+      ShareTripDialogProps) {
+        const [copied, setCopied] = useState(false);
+        const { toast } = useToast();
+        const publicUrl = `https://globetrotter.app/public/trip/${trip.id}`;
+
+        const handleCopy = () => {
+          navigator.clipboard.writeText(publicUrl);
+          setCopied(true);
+          toast({
+            description: 'Link copied to clipboard!',
+          });
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        const handleShare = (platform: string) => {
+          const text = `Check out my trip: ${trip.name}`;
+          let url = '';
+
+          switch (platform) {
+            case 'facebook':
+              url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}`;
+              break;
+            case 'twitter':
+              url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(publicUrl)}`;
+              break;
+            case 'whatsapp':
+              url = `https://wa.me/?text=${encodeURIComponent(text + ' ' + publicUrl)}`;
+              break;
+          }
+
+          if (url) {
+            window.open(url, '_blank');
+          }
+        };
+
+        return (
+          <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share Trip</DialogTitle>
+                <DialogDescription>Share your trip itinerary with friends and family</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Public Link</label>
+                  <div className="flex gap-2">
+                    <Input value={publicUrl} readOnly className="flex-1" />
+                    <Button onClick={handleCopy} type="button">
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Share on Social Media</label>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => handleShare('facebook')} type="button">
+                      <FaFacebook className="mr-2 h-4 w-4" />
+                      Facebook
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => handleShare('twitter')} type="button">
+                      <FaTwitter className="mr-2 h-4 w-4" />
+                      Twitter
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => handleShare('whatsapp')} type="button">
+                      <FaWhatsapp className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+    components/trip/all-trips-view.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent } from '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
+      from '@/components/ui/select';
+
+      import { TripCard } from './trip-card';
+
+      import { CreateTripDialog } from './create-trip-dialog';
+
+      import { Trip } from '@/types/trip';
+
+      import { Plus, Search, LayoutGrid, List } from 'lucide-react';
+
+
+      interface AllTripsViewProps {
+        trips: Trip[];
+        onCreateTrip: (values: any) => void;
+        onEditTrip: (tripId: string, values: any) => void;
+        onDeleteTrip: (tripId: string) => void;
+        onViewTrip: (tripId: string) => void;
+      }
+
+
+      export function AllTripsView({ trips, onCreateTrip, onEditTrip,
+      onDeleteTrip, onViewTrip }: AllTripsViewProps) {
+        const [createDialogOpen, setCreateDialogOpen] = useState(false);
+        const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+        const [searchQuery, setSearchQuery] = useState('');
+        const [filterStatus, setFilterStatus] = useState('all');
+        const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+        const now = new Date();
+        const filteredTrips = trips.filter((trip) => {
+          if (!trip || !trip.name) return false;
+          const matchesSearch = trip.name.toLowerCase().includes(searchQuery.toLowerCase());
+          const isUpcoming = new Date(trip.startDate) > now;
+          const isPast = new Date(trip.endDate) < now;
+
+          if (filterStatus === 'upcoming') return matchesSearch && isUpcoming;
+          if (filterStatus === 'past') return matchesSearch && isPast;
+          return matchesSearch;
+        });
+
+        const handleEdit = (trip: Trip) => {
+          setEditingTrip(trip);
+          setCreateDialogOpen(true);
+        };
+
+        const handleSubmit = (values: any) => {
+          if (editingTrip) {
+            onEditTrip(editingTrip.id, values);
+            setEditingTrip(null);
+          } else {
+            onCreateTrip(values);
+          }
+        };
+
+        const handleDialogClose = (open: boolean) => {
+          setCreateDialogOpen(open);
+          if (!open) {
+            setEditingTrip(null);
+          }
+        };
+
+        return (
+          <div className="space-y-6 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">All Trips</h1>
+                <p className="text-muted-foreground">Manage and organize your travel plans</p>
+              </div>
+              <Button onClick={() => setCreateDialogOpen(true)} type="button">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Trip
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search trips..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Trips</SelectItem>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="past">Past</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="icon"
+                      onClick={() => setViewMode('grid')}
+                      type="button"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="icon"
+                      onClick={() => setViewMode('list')}
+                      type="button"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {filteredTrips.length > 0 ? (
+              <div className={viewMode === 'grid' ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-4'}>
+                {filteredTrips.map((trip) => (
+                  <TripCard key={trip.id} trip={trip} onEdit={handleEdit} onDelete={onDeleteTrip} onView={onViewTrip} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <p className="mb-4 text-muted-foreground">No trips found</p>
+                  <Button onClick={() => setCreateDialogOpen(true)} type="button">
+                    Create Your First Trip
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <CreateTripDialog
+              open={createDialogOpen}
+              onOpenChange={handleDialogClose}
+              onSubmit={handleSubmit}
+              editTrip={editingTrip}
+            />
+          </div>
+        );
+      }
+    components/profile/profile-view.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Input } from '@/components/ui/input';
+
+      import { Label } from '@/components/ui/label';
+
+      import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+      import { Badge } from '@/components/ui/badge';
+
+      import { useToast } from '@/hooks/use-toast';
+
+      import { UserProfile } from '@/types/trip';
+
+      import { mockDestinations } from '@/lib/mock-data';
+
+      import { Edit2, Save, MapPin } from 'lucide-react';
+
+
+      interface ProfileViewProps {
+        profile: UserProfile;
+        onUpdateProfile: (profile: Partial<UserProfile>) => void;
+      }
+
+
+      export function ProfileView({ profile, onUpdateProfile }:
+      ProfileViewProps) {
+        const [editing, setEditing] = useState(false);
+        const [name, setName] = useState(profile.name);
+        const [email, setEmail] = useState(profile.email);
+        const { toast } = useToast();
+
+        const savedDestinations = mockDestinations.filter((dest) => profile.savedDestinations.includes(dest.id));
+
+        const handleSave = () => {
+          onUpdateProfile({ name, email });
+          setEditing(false);
+          toast({
+            description: 'Profile updated successfully!',
+          });
+        };
+
+        const initials = profile.name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase();
+
+        return (
+          <div className="space-y-6 p-6">
+            <div>
+              <h1 className="text-3xl font-bold">Profile</h1>
+              <p className="text-muted-foreground">Manage your personal information</p>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Personal Information</CardTitle>
+                    {!editing ? (
+                      <Button variant="outline" size="sm" onClick={() => setEditing(true)} type="button">
+                        <Edit2 className="mr-2 h-4 w-4" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={handleSave} type="button">
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+                    </Avatar>
+                    {editing && (
+                      <Button variant="outline" type="button">
+                        Change Photo
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label>Name</Label>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!editing} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Email</Label>
+                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!editing} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>User ID</Label>
+                      <Input value={profile.id} disabled />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Language</p>
+                    <p className="text-lg font-semibold">English</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Saved Destinations</p>
+                    <p className="text-lg font-semibold">{savedDestinations.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Member Since</p>
+                    <p className="text-lg font-semibold">January 2026</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Saved Destinations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {savedDestinations.map((dest) => (
+                    <div key={dest.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        <img src={dest.image} alt={dest.name} className="h-full w-full object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{dest.name}</h4>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{dest.country}</span>
+                        </div>
+                        <Badge variant="secondary" className="mt-1">
+                          Cost: {dest.costIndex}/10
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+    components/settings/settings-view.tsx: >
+      import { useState } from 'react';
+
+      import { Card, CardContent, CardDescription, CardHeader, CardTitle } from
+      '@/components/ui/card';
+
+      import { Button } from '@/components/ui/button';
+
+      import { Label } from '@/components/ui/label';
+
+      import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
+      from '@/components/ui/select';
+
+      import { Alert, AlertDescription } from '@/components/ui/alert';
+
+      import { useToast } from '@/hooks/use-toast';
+
+      import { AlertCircle, Trash2 } from 'lucide-react';
+
+      import {
+        Dialog,
+        DialogContent,
+        DialogDescription,
+        DialogFooter,
+        DialogHeader,
+        DialogTitle,
+      } from '@/components/ui/dialog';
+
+
+      interface SettingsViewProps {
+        language: string;
+        onUpdateLanguage: (language: string) => void;
+        onDeleteAccount: () => void;
+      }
+
+
+      export function SettingsView({ language, onUpdateLanguage, onDeleteAccount
+      }: SettingsViewProps) {
+        const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+        const { toast } = useToast();
+
+        const handleLanguageChange = (newLanguage: string) => {
+          onUpdateLanguage(newLanguage);
+          toast({
+            description: 'Language preference updated!',
+          });
+        };
+
+        const handleDeleteAccount = () => {
+          onDeleteAccount();
+          setDeleteDialogOpen(false);
+        };
+
+        return (
+          <div className="space-y-6 p-6">
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-muted-foreground">Manage your account preferences</p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Language Preference</CardTitle>
+                <CardDescription>Select your preferred language for the application</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2">
+                  <Label>Language</Label>
+                  <Select value={language} onValueChange={handleLanguageChange}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="de">Deutsch</SelectItem>
+                      <SelectItem value="it">Italiano</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Password</CardTitle>
+                <CardDescription>Change your account password</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" type="button">
+                  Change Password
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>Irreversible actions for your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Deleting your account will permanently remove all your trips, itineraries, and personal data. This action cannot be undone.
+                  </AlertDescription>
+                </Alert>
+                <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialogOpen(true)} type="button">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Are you absolutely sure?</DialogTitle>
+                  <DialogDescription>
+                    This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} type="button">
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteAccount} type="button">
+                    Yes, Delete My Account
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
+      }
+  data: '{{ module.data }}'
+  __UIBAKERY__RESPONSIVE__SHOW__CONDITION__CODE__:
+    - xl
+    - xs
+actions: {}
+slots:
+  - id: moduleContainerSlot
+    name: content
+    children: []
